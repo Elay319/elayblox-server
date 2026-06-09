@@ -7,11 +7,15 @@ const PORT = process.env.PORT || 3000;
 const GAMES_FILE = "games.json";
 
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "5mb" }));
 
 function getGames() {
   if (!fs.existsSync(GAMES_FILE)) return [];
-  return JSON.parse(fs.readFileSync(GAMES_FILE, "utf8") || "[]");
+  try {
+    return JSON.parse(fs.readFileSync(GAMES_FILE, "utf8") || "[]");
+  } catch {
+    return [];
+  }
 }
 
 function saveGames(games) {
@@ -45,16 +49,22 @@ app.post("/publish-block-game", (req, res) => {
     return res.status(400).json({ error: "Bad description" });
   }
 
-  if (!Array.isArray(blocks)) {
-    return res.status(400).json({ error: "Blocks must be an array" });
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return res.status(400).json({ error: "Add at least 1 block" });
   }
 
-  const safeBlocks = blocks.slice(0, 200).map(b => ({
+  const safeBlocks = blocks.slice(0, 300).map(b => ({
+    type: "block",
     x: Number(b.x) || 0,
     y: Number(b.y) || 0,
-    w: Number(b.w) || 50,
-    h: Number(b.h) || 50,
-    color: String(b.color || "green")
+    z: Number(b.z) || 0,
+    w: Math.max(1, Math.min(50, Number(b.w) || 4)),
+    h: Math.max(1, Math.min(50, Number(b.h) || 1)),
+    d: Math.max(1, Math.min(50, Number(b.d) || 4)),
+    color: String(b.color || "green").slice(0, 20),
+    script: ["normal", "bounce", "win", "damage"].includes(b.script)
+      ? b.script
+      : "normal"
   }));
 
   const games = getGames();
@@ -78,113 +88,167 @@ app.post("/publish-block-game", (req, res) => {
 });
 
 app.get("/play/:id", (req, res) => {
-  const games = getGames();
-  const game = games.find(g => g.id === req.params.id);
+  const game = getGames().find(g => g.id === req.params.id);
 
   if (!game) {
     return res.status(404).send("Game not found");
   }
 
+  const safeName = String(game.name).replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const safeDesc = String(game.description).replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-  <title>${game.name}</title>
+  <title>${safeName}</title>
   <style>
     body {
       margin: 0;
-      background: #111;
-      color: white;
+      overflow: hidden;
       font-family: Arial;
-      text-align: center;
+      background: #111827;
+      color: white;
     }
 
-    canvas {
-      background: skyblue;
-      display: block;
-      margin: 20px auto;
-      border: 3px solid white;
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 12px;
+      border-radius: 10px;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
-  <h1>${game.name}</h1>
-  <p>${game.description}</p>
-  <canvas id="game" width="800" height="450"></canvas>
+  <div id="ui">
+    <h2>${safeName}</h2>
+    <p>${safeDesc}</p>
+    <p>WASD move | Space jump</p>
+    <p id="status">HP: 100</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
   <script>
     const blocks = ${JSON.stringify(game.blocks)};
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
+    let hp = 100;
+    let won = false;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 20, 10);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    const blockMeshes = [];
+
+    for (const b of blocks) {
+      const geo = new THREE.BoxGeometry(b.w, b.h, b.d);
+      const mat = new THREE.MeshStandardMaterial({ color: b.color });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(b.x, b.y, b.z);
+      mesh.userData.block = b;
+      scene.add(mesh);
+      blockMeshes.push(mesh);
+    }
+
+    const playerGeo = new THREE.BoxGeometry(1, 2, 1);
+    const playerMat = new THREE.MeshStandardMaterial({ color: "red" });
+    const player = new THREE.Mesh(playerGeo, playerMat);
+    player.position.set(0, 5, 0);
+    scene.add(player);
 
     const keys = {};
-    const player = {
-      x: 50,
-      y: 50,
-      w: 30,
-      h: 40,
-      vx: 0,
-      vy: 0,
-      grounded: false
-    };
+    let velY = 0;
+    let grounded = false;
 
     document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
     document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    function hit(a, b) {
-      return a.x < b.x + b.w &&
-             a.x + a.w > b.x &&
-             a.y < b.y + b.h &&
-             a.y + a.h > b.y;
+    function intersects(a, b) {
+      const A = new THREE.Box3().setFromObject(a);
+      const B = new THREE.Box3().setFromObject(b);
+      return A.intersectsBox(B);
     }
 
     function update() {
-      player.vx = 0;
+      if (won) return;
 
-      if (keys["a"] || keys["arrowleft"]) player.vx = -5;
-      if (keys["d"] || keys["arrowright"]) player.vx = 5;
+      let speed = 0.12;
 
-      if ((keys["w"] || keys[" "] || keys["arrowup"]) && player.grounded) {
-        player.vy = -12;
-        player.grounded = false;
+      if (keys["w"]) player.position.z -= speed;
+      if (keys["s"]) player.position.z += speed;
+      if (keys["a"]) player.position.x -= speed;
+      if (keys["d"]) player.position.x += speed;
+
+      if (keys[" "] && grounded) {
+        velY = 0.28;
+        grounded = false;
       }
 
-      player.vy += 0.6;
-      player.x += player.vx;
-      player.y += player.vy;
+      velY -= 0.012;
+      player.position.y += velY;
 
-      player.grounded = false;
+      grounded = false;
 
-      for (const b of blocks) {
-        if (hit(player, b) && player.vy > 0) {
-          player.y = b.y - player.h;
-          player.vy = 0;
-          player.grounded = true;
+      for (const mesh of blockMeshes) {
+        const b = mesh.userData.block;
+
+        if (intersects(player, mesh) && velY <= 0) {
+          player.position.y = mesh.position.y + b.h / 2 + 1;
+          velY = 0;
+          grounded = true;
+
+          if (b.script === "bounce") {
+            velY = 0.45;
+          }
+
+          if (b.script === "damage") {
+            hp -= 1;
+            document.getElementById("status").textContent = "HP: " + hp;
+
+            if (hp <= 0) {
+              player.position.set(0, 5, 0);
+              hp = 100;
+              document.getElementById("status").textContent = "HP: 100";
+            }
+          }
+
+          if (b.script === "win") {
+            won = true;
+            document.getElementById("status").textContent = "YOU WIN!";
+            alert("You win!");
+          }
         }
       }
 
-      if (player.y > 600) {
-        player.x = 50;
-        player.y = 50;
-        player.vy = 0;
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      for (const b of blocks) {
-        ctx.fillStyle = b.color;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
+      if (player.position.y < -20) {
+        player.position.set(0, 5, 0);
+        velY = 0;
       }
 
-      ctx.fillStyle = "red";
-      ctx.fillRect(player.x, player.y, player.w, player.h);
+      camera.position.set(
+        player.position.x + 8,
+        player.position.y + 6,
+        player.position.z + 10
+      );
+      camera.lookAt(player.position);
     }
 
     function loop() {
       update();
-      draw();
+      renderer.render(scene, camera);
       requestAnimationFrame(loop);
     }
 
