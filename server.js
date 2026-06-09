@@ -120,6 +120,26 @@ app.get("/play/:id", (req, res) => {
       border-radius: 10px;
       z-index: 10;
     }
+
+    #mobileControls {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    #mobileControls button {
+      flex: 1;
+      padding: 18px;
+      font-size: 20px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.85);
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -128,6 +148,14 @@ app.get("/play/:id", (req, res) => {
     <p>${safeDesc}</p>
     <p>WASD move | Space jump</p>
     <p id="status">HP: 100</p>
+  </div>
+
+  <div id="mobileControls">
+    <button id="left">⬅</button>
+    <button id="right">➡</button>
+    <button id="forward">⬆</button>
+    <button id="back">⬇</button>
+    <button id="jump">Jump</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -145,6 +173,12 @@ app.get("/play/:id", (req, res) => {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+
+    window.addEventListener("resize", () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
 
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(10, 20, 10);
@@ -175,6 +209,40 @@ app.get("/play/:id", (req, res) => {
 
     document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
     document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+    function holdButton(id, key) {
+      const btn = document.getElementById(id);
+
+      btn.addEventListener("touchstart", e => {
+        e.preventDefault();
+        keys[key] = true;
+      });
+
+      btn.addEventListener("touchend", e => {
+        e.preventDefault();
+        keys[key] = false;
+      });
+
+      btn.addEventListener("mousedown", e => {
+        e.preventDefault();
+        keys[key] = true;
+      });
+
+      btn.addEventListener("mouseup", e => {
+        e.preventDefault();
+        keys[key] = false;
+      });
+
+      btn.addEventListener("mouseleave", () => {
+        keys[key] = false;
+      });
+    }
+
+    holdButton("left", "a");
+    holdButton("right", "d");
+    holdButton("forward", "w");
+    holdButton("back", "s");
+    holdButton("jump", " ");
 
     function intersects(a, b) {
       const A = new THREE.Box3().setFromObject(a);
