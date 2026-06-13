@@ -220,8 +220,8 @@ const blocks = ${JSON.stringify(game.blocks)};
 const gameId = "${game.id}";
 const socket = io();
 
-const savedUser = JSON.parse(localStorage.getItem("elaybloxUser") || "null");
-const username = savedUser ? savedUser.username : "Guest";
+const params = new URLSearchParams(window.location.search);
+const username = params.get("username") || "Guest";
 
 let hp = 100;
 let won = false;
