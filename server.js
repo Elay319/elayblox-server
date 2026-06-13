@@ -3,6 +3,8 @@ const cors = require("cors");
 const fs = require("fs");
 const crypto = require("crypto");
 const http = require("http");
+const multer = require("multer");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -15,6 +17,43 @@ const USERS_FILE = "users.json";
 
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
+app.use("/uploads", express.static("uploads"));
+
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
+
+if (!fs.existsSync("uploads/avatars")) {
+  fs.mkdirSync("uploads/avatars");
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/avatars");
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, Date.now() + ext);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 1024 * 1024
+  },
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/webp"
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images allowed"));
+    }
+  }
+});
 
 function readJson(file, fallback) {
   if (!fs.existsSync(file)) return fallback;
@@ -172,7 +211,41 @@ app.post("/publish-block-game", (req, res) => {
     playUrl: `https://elayblox-server.onrender.com/play/${newGame.id}`
   });
 });
+app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
+  const { userId } = req.body;
 
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: "Missing avatar file" });
+  }
+
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const avatarUrl =
+    "https://elayblox-server.onrender.com/uploads/avatars/" +
+    req.file.filename;
+
+  user.avatar = avatarUrl;
+  saveUsers(users);
+
+  res.json({
+    success: true,
+    avatar: avatarUrl,
+    user: {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar
+    }
+  });
+});
 app.get("/play/:id", (req, res) => {
   const game = getGames().find(g => g.id === req.params.id);
 
