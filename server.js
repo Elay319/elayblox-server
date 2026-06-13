@@ -436,6 +436,66 @@ loop();
   `);
 });
 
-app.listen(PORT, () => {
+const gameRooms = {};
+
+io.on("connection", socket => {
+  socket.on("joinGame", data => {
+    const gameId = data.gameId || "default";
+    const username = data.username || "Guest";
+
+    socket.join(gameId);
+    socket.gameId = gameId;
+
+    if (!gameRooms[gameId]) {
+      gameRooms[gameId] = {};
+    }
+
+    gameRooms[gameId][socket.id] = {
+      username,
+      x: 0,
+      y: 5,
+      z: 0
+    };
+
+    socket.emit("currentPlayers", gameRooms[gameId]);
+
+    socket.to(gameId).emit("playerJoined", {
+      id: socket.id,
+      username
+    });
+  });
+
+  socket.on("playerMove", data => {
+    const gameId = data.gameId || socket.gameId;
+
+    if (!gameId || !gameRooms[gameId] || !gameRooms[gameId][socket.id]) return;
+
+    gameRooms[gameId][socket.id] = {
+      username: data.username || "Guest",
+      x: Number(data.x) || 0,
+      y: Number(data.y) || 0,
+      z: Number(data.z) || 0
+    };
+
+    socket.to(gameId).emit("playerMove", {
+      id: socket.id,
+      username: data.username || "Guest",
+      x: Number(data.x) || 0,
+      y: Number(data.y) || 0,
+      z: Number(data.z) || 0
+    });
+  });
+
+  socket.on("disconnect", () => {
+    const gameId = socket.gameId;
+
+    if (gameId && gameRooms[gameId]) {
+      delete gameRooms[gameId][socket.id];
+      socket.to(gameId).emit("playerLeft", socket.id);
+    }
+  });
+});
+
+server.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
