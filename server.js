@@ -17,6 +17,25 @@ function getGames() {
     return [];
   }
 }
+const crypto = require("crypto");
+const USERS_FILE = "users.json";
+
+function getUsers() {
+  if (!fs.existsSync(USERS_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
 
 function saveGames(games) {
   fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
