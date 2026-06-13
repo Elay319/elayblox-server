@@ -1,44 +1,49 @@
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
+const crypto = require("crypto");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 const GAMES_FILE = "games.json";
+const USERS_FILE = "users.json";
 
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 
-function getGames() {
-  if (!fs.existsSync(GAMES_FILE)) return [];
+function readJson(file, fallback) {
+  if (!fs.existsSync(file)) return fallback;
+
   try {
-    return JSON.parse(fs.readFileSync(GAMES_FILE, "utf8") || "[]");
+    return JSON.parse(fs.readFileSync(file, "utf8") || JSON.stringify(fallback));
   } catch {
-    return [];
+    return fallback;
   }
 }
-const crypto = require("crypto");
-const USERS_FILE = "users.json";
+
+function writeJson(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+function getGames() {
+  return readJson(GAMES_FILE, []);
+}
+
+function saveGames(games) {
+  writeJson(GAMES_FILE, games);
+}
 
 function getUsers() {
-  if (!fs.existsSync(USERS_FILE)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8") || "[]");
-  } catch {
-    return [];
-  }
+  return readJson(USERS_FILE, []);
 }
 
 function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  writeJson(USERS_FILE, users);
 }
 
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
-}
-
-function saveGames(games) {
-  fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
 }
 
 app.get("/", (req, res) => {
@@ -51,14 +56,73 @@ app.get("/games", (req, res) => {
     name: g.name,
     description: g.description,
     image: g.image,
+    creator: g.creator || "Unknown",
     link: `https://elayblox-server.onrender.com/play/${g.id}`
   }));
 
   res.json(games);
 });
 
+app.post("/register", (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || username.length < 3 || username.length > 20) {
+    return res.status(400).json({ error: "Username must be 3-20 characters" });
+  }
+
+  if (!password || password.length < 4) {
+    return res.status(400).json({ error: "Password too short" });
+  }
+
+  const users = getUsers();
+
+  if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+    return res.status(400).json({ error: "Username already exists" });
+  }
+
+  const newUser = {
+    id: Date.now().toString(),
+    username,
+    passwordHash: hashPassword(password),
+    avatar: null,
+    createdAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+
+  res.json({
+    success: true,
+    user: {
+      id: newUser.id,
+      username: newUser.username,
+      avatar: newUser.avatar
+    }
+  });
+});
+
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user || user.passwordHash !== hashPassword(password)) {
+    return res.status(400).json({ error: "Wrong username or password" });
+  }
+
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar
+    }
+  });
+});
+
 app.post("/publish-block-game", (req, res) => {
-  const { name, description, blocks } = req.body;
+  const { name, description, blocks, creator } = req.body;
 
   if (!name || name.length > 40) {
     return res.status(400).json({ error: "Bad game name" });
@@ -92,6 +156,7 @@ app.post("/publish-block-game", (req, res) => {
     id: Date.now().toString(),
     name,
     description,
+    creator: creator || "Unknown",
     image: "https://picsum.photos/300/180",
     blocks: safeBlocks
   };
@@ -120,227 +185,242 @@ app.get("/play/:id", (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>${safeName}</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial;
-      background: #111827;
-      color: white;
-    }
+<title>${safeName}</title>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial;
+  background: #111827;
+  color: white;
+}
 
-    #ui {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
-      padding: 12px;
-      border-radius: 10px;
-      z-index: 10;
-    }
+#ui {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.5);
+  padding: 12px;
+  border-radius: 10px;
+  z-index: 10;
+}
 
-    #mobileControls {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
-      display: flex;
-      gap: 10px;
-      z-index: 20;
-    }
+#mobileControls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+}
 
-    #mobileControls button {
-      flex: 1;
-      padding: 18px;
-      font-size: 20px;
-      border: none;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.85);
-      font-weight: bold;
-    }
-  </style>
+#mobileControls button {
+  flex: 1;
+  padding: 18px;
+  font-size: 20px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  font-weight: bold;
+}
+</style>
 </head>
 <body>
-  <div id="ui">
-    <h2>${safeName}</h2>
-    <p>${safeDesc}</p>
-    <p>WASD move | Space jump</p>
-    <p id="status">HP: 100</p>
-  </div>
 
-  <div id="mobileControls">
-    <button id="left">⬅</button>
-    <button id="right">➡</button>
-    <button id="forward">⬆</button>
-    <button id="back">⬇</button>
-    <button id="jump">Jump</button>
-  </div>
+<div id="ui">
+  <h2>${safeName}</h2>
+  <p>${safeDesc}</p>
+  <p>By ${game.creator || "Unknown"}</p>
+  <p>WASD move | Space jump</p>
+  <p id="status">HP: 100</p>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<div id="mobileControls">
+  <button id="left">⬅</button>
+  <button id="right">➡</button>
+  <button id="forward">⬆</button>
+  <button id="back">⬇</button>
+  <button id="jump">Jump</button>
+</div>
 
-  <script>
-    const blocks = ${JSON.stringify(game.blocks)};
-    let hp = 100;
-    let won = false;
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
+<script>
+const blocks = ${JSON.stringify(game.blocks)};
+let hp = 100;
+let won = false;
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
 
-    window.addEventListener("resize", () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-    });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 20, 10);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+window.addEventListener("resize", () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
 
-    const blockMeshes = [];
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(10, 20, 10);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-    for (const b of blocks) {
-      const geo = new THREE.BoxGeometry(b.w, b.h, b.d);
-      const mat = new THREE.MeshStandardMaterial({ color: b.color });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(b.x, b.y, b.z);
-      mesh.userData.block = b;
-      scene.add(mesh);
-      blockMeshes.push(mesh);
-    }
+const blockMeshes = [];
 
-    const playerGeo = new THREE.BoxGeometry(1, 2, 1);
-    const playerMat = new THREE.MeshStandardMaterial({ color: "red" });
-    const player = new THREE.Mesh(playerGeo, playerMat);
-    player.position.set(0, 5, 0);
-    scene.add(player);
+for (const b of blocks) {
+  const geo = new THREE.BoxGeometry(b.w, b.h, b.d);
+  const mat = new THREE.MeshStandardMaterial({ color: b.color });
+  const mesh = new THREE.Mesh(geo, mat);
 
-    const keys = {};
-    let velY = 0;
-    let grounded = false;
+  mesh.position.set(b.x, b.y, b.z);
+  mesh.userData.block = b;
 
-    document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-    document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+  scene.add(mesh);
+  blockMeshes.push(mesh);
+}
 
-    function holdButton(id, key) {
-      const btn = document.getElementById(id);
+const playerGeo = new THREE.BoxGeometry(1, 2, 1);
+const playerMat = new THREE.MeshStandardMaterial({ color: "red" });
+const player = new THREE.Mesh(playerGeo, playerMat);
+player.position.set(0, 5, 0);
+scene.add(player);
 
-      btn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        keys[key] = true;
-      });
+const keys = {};
+let velY = 0;
+let grounded = false;
 
-      btn.addEventListener("touchend", e => {
-        e.preventDefault();
-        keys[key] = false;
-      });
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+});
 
-      btn.addEventListener("mousedown", e => {
-        e.preventDefault();
-        keys[key] = true;
-      });
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
 
-      btn.addEventListener("mouseup", e => {
-        e.preventDefault();
-        keys[key] = false;
-      });
+function holdButton(id, key) {
+  const btn = document.getElementById(id);
 
-      btn.addEventListener("mouseleave", () => {
-        keys[key] = false;
-      });
-    }
+  btn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys[key] = true;
+  });
 
-    holdButton("left", "a");
-    holdButton("right", "d");
-    holdButton("forward", "w");
-    holdButton("back", "s");
-    holdButton("jump", " ");
+  btn.addEventListener("touchend", e => {
+    e.preventDefault();
+    keys[key] = false;
+  });
 
-    function intersects(a, b) {
-      const A = new THREE.Box3().setFromObject(a);
-      const B = new THREE.Box3().setFromObject(b);
-      return A.intersectsBox(B);
-    }
+  btn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    keys[key] = true;
+  });
 
-    function update() {
-      if (won) return;
+  btn.addEventListener("mouseup", e => {
+    e.preventDefault();
+    keys[key] = false;
+  });
 
-      let speed = 0.12;
+  btn.addEventListener("mouseleave", () => {
+    keys[key] = false;
+  });
+}
 
-      if (keys["w"]) player.position.z -= speed;
-      if (keys["s"]) player.position.z += speed;
-      if (keys["a"]) player.position.x -= speed;
-      if (keys["d"]) player.position.x += speed;
+holdButton("left", "a");
+holdButton("right", "d");
+holdButton("forward", "w");
+holdButton("back", "s");
+holdButton("jump", " ");
 
-      if (keys[" "] && grounded) {
-        velY = 0.28;
-        grounded = false;
+function intersects(a, b) {
+  const A = new THREE.Box3().setFromObject(a);
+  const B = new THREE.Box3().setFromObject(b);
+  return A.intersectsBox(B);
+}
+
+function update() {
+  if (won) return;
+
+  let speed = 0.12;
+
+  if (keys["w"]) player.position.z -= speed;
+  if (keys["s"]) player.position.z += speed;
+  if (keys["a"]) player.position.x -= speed;
+  if (keys["d"]) player.position.x += speed;
+
+  if (keys[" "] && grounded) {
+    velY = 0.28;
+    grounded = false;
+  }
+
+  velY -= 0.012;
+  player.position.y += velY;
+
+  grounded = false;
+
+  for (const mesh of blockMeshes) {
+    const b = mesh.userData.block;
+
+    if (intersects(player, mesh) && velY <= 0) {
+      player.position.y = mesh.position.y + b.h / 2 + 1;
+      velY = 0;
+      grounded = true;
+
+      if (b.script === "bounce") {
+        velY = 0.45;
       }
 
-      velY -= 0.012;
-      player.position.y += velY;
+      if (b.script === "damage") {
+        hp -= 1;
+        document.getElementById("status").textContent = "HP: " + hp;
 
-      grounded = false;
-
-      for (const mesh of blockMeshes) {
-        const b = mesh.userData.block;
-
-        if (intersects(player, mesh) && velY <= 0) {
-          player.position.y = mesh.position.y + b.h / 2 + 1;
-          velY = 0;
-          grounded = true;
-
-          if (b.script === "bounce") {
-            velY = 0.45;
-          }
-
-          if (b.script === "damage") {
-            hp -= 1;
-            document.getElementById("status").textContent = "HP: " + hp;
-
-            if (hp <= 0) {
-              player.position.set(0, 5, 0);
-              hp = 100;
-              document.getElementById("status").textContent = "HP: 100";
-            }
-          }
-
-          if (b.script === "win") {
-            won = true;
-            document.getElementById("status").textContent = "YOU WIN!";
-            alert("You win!");
-          }
+        if (hp <= 0) {
+          player.position.set(0, 5, 0);
+          hp = 100;
+          document.getElementById("status").textContent = "HP: 100";
         }
       }
 
-      if (player.position.y < -20) {
-        player.position.set(0, 5, 0);
-        velY = 0;
+      if (b.script === "win") {
+        won = true;
+        document.getElementById("status").textContent = "YOU WIN!";
+        alert("You win!");
       }
-
-      camera.position.set(
-        player.position.x + 8,
-        player.position.y + 6,
-        player.position.z + 10
-      );
-      camera.lookAt(player.position);
     }
+  }
 
-    function loop() {
-      update();
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
-    }
+  if (player.position.y < -20) {
+    player.position.set(0, 5, 0);
+    velY = 0;
+  }
 
-    loop();
-  </script>
+  camera.position.set(
+    player.position.x + 8,
+    player.position.y + 6,
+    player.position.z + 10
+  );
+
+  camera.lookAt(player.position);
+}
+
+function loop() {
+  update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
 </body>
 </html>
   `);
