@@ -258,7 +258,7 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <p>${safeDesc}</p>
   <p>By ${game.creator || "Unknown"}</p>
   <p>WASD move | Space jump</p>
-  <p id="status">HP: 100</p>
+  <p id="status">HP: 100 | Coins: 0</p>
   <p id="players">Players: 1</p>
 </div>
 
@@ -288,7 +288,11 @@ const username = params.get("username") || "Guest";
 const avatar = params.get("avatar") || "";
 
 let hp = 100;
+let coins = 0;
 let won = false;
+let checkpoint = { x: 0, y: 5, z: 0 };
+let speedBoostUntil = 0;
+const collectedCoins = new Set();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -514,7 +518,7 @@ let lastSent = 0;
 function update(){
   if (won) return;
 
-  const speed = .12;
+  const speed = Date.now() < speedBoostUntil ? .22 : .12;
 
   if (keys["w"]) player.position.z -= speed;
   if (keys["s"]) player.position.z += speed;
@@ -539,13 +543,46 @@ function update(){
       grounded = true;
 
       if (b.script === "bounce") velY = .45;
+      if (b.script === "speed") {
+  speedBoostUntil = Date.now() + 3000;
+}
 
+if (b.script === "teleport") {
+  player.position.set(0, 5, 0);
+  velY = 0;
+}
+
+if (b.script === "checkpoint") {
+  checkpoint = {
+    x: player.position.x,
+    y: player.position.y,
+    z: player.position.z
+  };
+}
+
+if (b.script === "coin") {
+  const coinId = mesh.uuid;
+
+  if (!collectedCoins.has(coinId)) {
+    collectedCoins.add(coinId);
+    coins += 1;
+    scene.remove(mesh);
+
+    document.getElementById("status").textContent =
+      "HP: " + hp + " | Coins: " + coins;
+  }
+}
+
+if (b.script === "kill") {
+  player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
+  velY = 0;
+}
       if (b.script === "damage") {
         hp -= 1;
         document.getElementById("status").textContent = "HP: " + hp;
 
         if (hp <= 0) {
-          player.position.set(0,5,0);
+          player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
           hp = 100;
           document.getElementById("status").textContent = "HP: 100";
         }
