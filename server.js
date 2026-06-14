@@ -60,6 +60,7 @@ function getGames() { return readJson(GAMES_FILE, []); }
 function saveGames(games) { writeJson(GAMES_FILE, games); }
 function getUsers() { return readJson(USERS_FILE, []); }
 function saveUsers(users) { writeJson(USERS_FILE, users); }
+
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
@@ -235,29 +236,9 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
 #ui{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.5);padding:12px;border-radius:10px;z-index:10}
 #mobileControls{position:fixed;bottom:20px;left:20px;right:20px;display:flex;gap:10px;z-index:20}
 #mobileControls button{flex:1;padding:18px;font-size:20px;border:none;border-radius:12px;background:rgba(255,255,255,.85);font-weight:bold}
-#chatBox {
-  position: fixed;
-  right: 10px;
-  bottom: 100px;
-  width: 260px;
-  height: 220px;
-  background: rgba(0,0,0,0.55);
-  border-radius: 10px;
-  padding: 10px;
-  z-index: 30;
-}
-
-#chatMessages {
-  height: 170px;
-  overflow-y: auto;
-  font-size: 14px;
-}
-
-#chatInput {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px;
-}
+#chatBox{position:fixed;right:10px;bottom:100px;width:260px;height:220px;background:rgba(0,0,0,.55);border-radius:10px;padding:10px;z-index:30}
+#chatMessages{height:170px;overflow-y:auto;font-size:14px}
+#chatInput{width:100%;box-sizing:border-box;padding:8px}
 </style>
 </head>
 <body>
@@ -277,10 +258,11 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <button id="forward">⬆</button>
   <button id="back">⬇</button>
   <button id="jump">Jump</button>
-  <div id="chatBox">
+</div>
+
+<div id="chatBox">
   <div id="chatMessages"></div>
   <input id="chatInput" placeholder="Type chat and press Enter">
-</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -386,12 +368,7 @@ function createOtherPlayer(id, name, avatarUrl) {
     });
   }
 
-  otherPlayers[id] = {
-    mesh,
-    label,
-    avatar: avatarSprite
-  };
-
+  otherPlayers[id] = { mesh, label, avatar: avatarSprite };
   updatePlayerCount();
 }
 
@@ -401,20 +378,18 @@ function updatePlayerCount() {
 }
 
 socket.emit("joinGame", {gameId, username, avatar});
+
 const chatInput = document.getElementById("chatInput");
 const chatMessages = document.getElementById("chatMessages");
 
 chatInput.addEventListener("keydown", e => {
+  e.stopPropagation();
+
   if (e.key === "Enter") {
     const text = chatInput.value.trim();
 
     if (text.length > 0 && text.length <= 100) {
-      socket.emit("chatMessage", {
-        gameId,
-        username,
-        text
-      });
-
+      socket.emit("chatMessage", { gameId, username, text });
       chatInput.value = "";
     }
   }
@@ -425,21 +400,8 @@ socket.on("chatMessage", data => {
   div.textContent = data.username + ": " + data.text;
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
-});io.on("connection", socket => { ... }):
-socket.on("chatMessage", data => {
-  const gameId = data.gameId || socket.gameId;
-  if (!gameId) return;
-
-  const username = String(data.username || "Guest").slice(0, 20);
-  const text = String(data.text || "").slice(0, 100);
-
-  if (!text.trim()) return;
-
-  io.to(gameId).emit("chatMessage", {
-    username,
-    text
-  });
 });
+
 socket.on("currentPlayers", players => {
   for (const id in players) {
     if (id !== socket.id) {
@@ -489,8 +451,15 @@ const keys = {};
 let velY = 0;
 let grounded = false;
 
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+document.addEventListener("keydown", e => {
+  if (document.activeElement === chatInput) return;
+  keys[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener("keyup", e => {
+  if (document.activeElement === chatInput) return;
+  keys[e.key.toLowerCase()] = false;
+});
 
 function holdButton(id,key){
   const btn = document.getElementById(id);
@@ -664,6 +633,21 @@ io.on("connection", socket => {
       x: Number(data.x) || 0,
       y: Number(data.y) || 0,
       z: Number(data.z) || 0
+    });
+  });
+
+  socket.on("chatMessage", data => {
+    const gameId = data.gameId || socket.gameId;
+    if (!gameId) return;
+
+    const username = String(data.username || "Guest").slice(0, 20);
+    const text = String(data.text || "").slice(0, 100);
+
+    if (!text.trim()) return;
+
+    io.to(gameId).emit("chatMessage", {
+      username,
+      text
     });
   });
 
