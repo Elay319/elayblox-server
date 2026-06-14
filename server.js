@@ -19,18 +19,11 @@ app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 app.use("/uploads", express.static("uploads"));
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
-
-if (!fs.existsSync("uploads/avatars")) {
-  fs.mkdirSync("uploads/avatars");
-}
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync("uploads/avatars")) fs.mkdirSync("uploads/avatars");
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/avatars");
-  },
+  destination: (req, file, cb) => cb(null, "uploads/avatars"),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, Date.now() + ext);
@@ -39,19 +32,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: {
-    fileSize: 1024 * 1024
-  },
+  limits: { fileSize: 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (
       file.mimetype === "image/png" ||
       file.mimetype === "image/jpeg" ||
       file.mimetype === "image/webp"
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only images allowed"));
-    }
+    ) cb(null, true);
+    else cb(new Error("Only images allowed"));
   }
 });
 
@@ -68,22 +56,10 @@ function writeJson(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-function getGames() {
-  return readJson(GAMES_FILE, []);
-}
-
-function saveGames(games) {
-  writeJson(GAMES_FILE, games);
-}
-
-function getUsers() {
-  return readJson(USERS_FILE, []);
-}
-
-function saveUsers(users) {
-  writeJson(USERS_FILE, users);
-}
-
+function getGames() { return readJson(GAMES_FILE, []); }
+function saveGames(games) { writeJson(GAMES_FILE, games); }
+function getUsers() { return readJson(USERS_FILE, []); }
+function saveUsers(users) { writeJson(USERS_FILE, users); }
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
@@ -211,23 +187,17 @@ app.post("/publish-block-game", (req, res) => {
     playUrl: `https://elayblox-server.onrender.com/play/${newGame.id}`
   });
 });
+
 app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
   const { userId } = req.body;
 
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId" });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: "Missing avatar file" });
-  }
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  if (!req.file) return res.status(400).json({ error: "Missing avatar file" });
 
   const users = getUsers();
   const user = users.find(u => u.id === userId);
 
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
-  }
+  if (!user) return res.status(404).json({ error: "User not found" });
 
   const avatarUrl =
     "https://elayblox-server.onrender.com/uploads/avatars/" +
@@ -246,6 +216,7 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
     }
   });
 });
+
 app.get("/play/:id", (req, res) => {
   const game = getGames().find(g => g.id === req.params.id);
 
@@ -357,7 +328,7 @@ function makeNameLabel(name) {
   return sprite;
 }
 
-function createOtherPlayer(id, name) {
+function createOtherPlayer(id, name, avatarUrl) {
   if (id === socket.id) return;
   if (otherPlayers[id]) return;
 
@@ -371,7 +342,29 @@ function createOtherPlayer(id, name) {
   label.position.set(0,7,0);
   scene.add(label);
 
-  otherPlayers[id] = {mesh,label};
+  let avatarSprite = null;
+
+  if (avatarUrl) {
+    const loader = new THREE.TextureLoader();
+    loader.load(avatarUrl, texture => {
+      const avatarMat = new THREE.SpriteMaterial({map:texture});
+      avatarSprite = new THREE.Sprite(avatarMat);
+      avatarSprite.scale.set(1.5,1.5,1);
+      avatarSprite.position.set(0,8,0);
+      scene.add(avatarSprite);
+
+      if (otherPlayers[id]) {
+        otherPlayers[id].avatar = avatarSprite;
+      }
+    });
+  }
+
+  otherPlayers[id] = {
+    mesh,
+    label,
+    avatar: avatarSprite
+  };
+
   updatePlayerCount();
 }
 
@@ -385,24 +378,32 @@ socket.emit("joinGame", {gameId, username, avatar});
 socket.on("currentPlayers", players => {
   for (const id in players) {
     if (id !== socket.id) {
-      createOtherPlayer(id, players[id].username);
+      createOtherPlayer(id, players[id].username, players[id].avatar);
       otherPlayers[id].mesh.position.set(players[id].x, players[id].y, players[id].z);
       otherPlayers[id].label.position.set(players[id].x, players[id].y + 1.7, players[id].z);
+
+      if (otherPlayers[id].avatar) {
+        otherPlayers[id].avatar.position.set(players[id].x, players[id].y + 2.8, players[id].z);
+      }
     }
   }
 });
 
 socket.on("playerJoined", data => {
-  createOtherPlayer(data.id, data.username);
+  createOtherPlayer(data.id, data.username, data.avatar);
 });
 
 socket.on("playerMove", data => {
   if (data.id === socket.id) return;
 
-  createOtherPlayer(data.id, data.username);
+  createOtherPlayer(data.id, data.username, data.avatar);
 
   otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
   otherPlayers[data.id].label.position.set(data.x, data.y + 1.7, data.z);
+
+  if (otherPlayers[data.id].avatar) {
+    otherPlayers[data.id].avatar.position.set(data.x, data.y + 2.8, data.z);
+  }
 });
 
 socket.on("playerLeft", id => {
@@ -410,6 +411,11 @@ socket.on("playerLeft", id => {
 
   scene.remove(otherPlayers[id].mesh);
   scene.remove(otherPlayers[id].label);
+
+  if (otherPlayers[id].avatar) {
+    scene.remove(otherPlayers[id].avatar);
+  }
+
   delete otherPlayers[id];
   updatePlayerCount();
 });
@@ -550,7 +556,7 @@ io.on("connection", socket => {
   socket.on("joinGame", data => {
     const gameId = data.gameId || "default";
     const username = data.username || "Guest";
-const avatar = data.avatar || "";
+    const avatar = data.avatar || "";
 
     socket.join(gameId);
     socket.gameId = gameId;
@@ -580,6 +586,7 @@ const avatar = data.avatar || "";
 
     gameRooms[gameId][socket.id] = {
       username: data.username || "Guest",
+      avatar: data.avatar || "",
       x: Number(data.x) || 0,
       y: Number(data.y) || 0,
       z: Number(data.z) || 0
@@ -588,6 +595,7 @@ const avatar = data.avatar || "";
     socket.to(gameId).emit("playerMove", {
       id: socket.id,
       username: data.username || "Guest",
+      avatar: data.avatar || "",
       x: Number(data.x) || 0,
       y: Number(data.y) || 0,
       z: Number(data.z) || 0
