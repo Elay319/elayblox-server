@@ -295,6 +295,7 @@ const socket = io();
 
 const params = new URLSearchParams(window.location.search);
 const username = params.get("username") || "Guest";
+const avatar = params.get("avatar") || "";
 
 let hp = 100;
 let won = false;
