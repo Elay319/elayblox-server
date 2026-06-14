@@ -163,9 +163,19 @@ app.post("/publish-block-game", (req, res) => {
     h: Math.max(1, Math.min(50, Number(b.h) || 1)),
     d: Math.max(1, Math.min(50, Number(b.d) || 4)),
     color: String(b.color || "green").slice(0, 20),
-    script: ["normal", "bounce", "win", "damage"].includes(b.script)
-      ? b.script
-      : "normal"
+   script: [
+  "normal",
+  "bounce",
+  "win",
+  "damage",
+  "speed",
+  "teleport",
+  "checkpoint",
+  "coin",
+  "kill"
+].includes(b.script)
+  ? b.script
+  : "normal"
   }));
 
   const games = getGames();
