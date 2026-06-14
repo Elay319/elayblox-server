@@ -553,12 +553,11 @@ if (b.script === "teleport") {
 }
 
 if (b.script === "checkpoint") {
-  checkpoint = {
-    x: player.position.x,
-    y: player.position.y,
-    z: player.position.z
-  };
-}
+checkpoint = {
+  x: mesh.position.x,
+  y: mesh.position.y + b.h / 2 + 2,
+  z: mesh.position.z
+};
 
 if (b.script === "coin") {
   const coinId = mesh.uuid;
