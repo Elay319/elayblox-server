@@ -235,6 +235,29 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
 #ui{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.5);padding:12px;border-radius:10px;z-index:10}
 #mobileControls{position:fixed;bottom:20px;left:20px;right:20px;display:flex;gap:10px;z-index:20}
 #mobileControls button{flex:1;padding:18px;font-size:20px;border:none;border-radius:12px;background:rgba(255,255,255,.85);font-weight:bold}
+#chatBox {
+  position: fixed;
+  right: 10px;
+  bottom: 100px;
+  width: 260px;
+  height: 220px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 30;
+}
+
+#chatMessages {
+  height: 170px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
+#chatInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+}
 </style>
 </head>
 <body>
@@ -254,6 +277,10 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <button id="forward">⬆</button>
   <button id="back">⬇</button>
   <button id="jump">Jump</button>
+  <div id="chatBox">
+  <div id="chatMessages"></div>
+  <input id="chatInput" placeholder="Type chat and press Enter">
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -374,7 +401,45 @@ function updatePlayerCount() {
 }
 
 socket.emit("joinGame", {gameId, username, avatar});
+const chatInput = document.getElementById("chatInput");
+const chatMessages = document.getElementById("chatMessages");
 
+chatInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    const text = chatInput.value.trim();
+
+    if (text.length > 0 && text.length <= 100) {
+      socket.emit("chatMessage", {
+        gameId,
+        username,
+        text
+      });
+
+      chatInput.value = "";
+    }
+  }
+});
+
+socket.on("chatMessage", data => {
+  const div = document.createElement("div");
+  div.textContent = data.username + ": " + data.text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});io.on("connection", socket => { ... }):
+socket.on("chatMessage", data => {
+  const gameId = data.gameId || socket.gameId;
+  if (!gameId) return;
+
+  const username = String(data.username || "Guest").slice(0, 20);
+  const text = String(data.text || "").slice(0, 100);
+
+  if (!text.trim()) return;
+
+  io.to(gameId).emit("chatMessage", {
+    username,
+    text
+  });
+});
 socket.on("currentPlayers", players => {
   for (const id in players) {
     if (id !== socket.id) {
