@@ -380,7 +380,7 @@ function updatePlayerCount() {
     "Players: " + (Object.keys(otherPlayers).length + 1);
 }
 
-socket.emit("joinGame", {gameId, username});
+socket.emit("joinGame", {gameId, username, avatar});
 
 socket.on("currentPlayers", players => {
   for (const id in players) {
@@ -522,6 +522,7 @@ function update(){
     socket.emit("playerMove", {
       gameId,
       username,
+      avatar,
       x: player.position.x,
       y: player.position.y,
       z: player.position.z
@@ -549,6 +550,7 @@ io.on("connection", socket => {
   socket.on("joinGame", data => {
     const gameId = data.gameId || "default";
     const username = data.username || "Guest";
+const avatar = data.avatar || "";
 
     socket.join(gameId);
     socket.gameId = gameId;
@@ -557,6 +559,7 @@ io.on("connection", socket => {
 
     gameRooms[gameId][socket.id] = {
       username,
+      avatar,
       x: 0,
       y: 5,
       z: 0
@@ -566,7 +569,8 @@ io.on("connection", socket => {
 
     socket.to(gameId).emit("playerJoined", {
       id: socket.id,
-      username
+      username,
+      avatar
     });
   });
 
