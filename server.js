@@ -627,7 +627,7 @@ if (b.script === "coin") {
     scene.remove(mesh);
 
     document.getElementById("status").textContent =
-      "HP: " + hp + " | Coins: " + coins;
+  "HP: 100 | Coins: " + coins;
   }
 }
 
@@ -654,10 +654,10 @@ if (b.script === "kill") {
     }
   }
 
-  if (player.position.y < -20) {
-    player.position.set(0,5,0);
-    velY = 0;
-  }
+if (player.position.y < -20) {
+  player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);
+  velY = 0;
+}
 
   camera.position.set(player.position.x + 8, player.position.y + 6, player.position.z + 10);
   camera.lookAt(player.position);
