@@ -76,6 +76,7 @@ app.get("/games", (req, res) => {
     description: g.description,
     image: g.image,
     creator: g.creator || "Unknown",
+    creatorId: g.creatorId || null,
     link: `https://elayblox-server.onrender.com/play/${g.id}`
   })));
 });
@@ -140,7 +141,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/publish-block-game", (req, res) => {
-  const { name, description, blocks, creator } = req.body;
+  const { name, description, blocks, creator, creatorId } = req.body;
 
   if (!name || name.length > 40) {
     return res.status(400).json({ error: "Bad game name" });
@@ -180,14 +181,15 @@ app.post("/publish-block-game", (req, res) => {
 
   const games = getGames();
 
-  const newGame = {
-    id: Date.now().toString(),
-    name,
-    description,
-    creator: creator || "Unknown",
-    image: "https://picsum.photos/300/180",
-    blocks: safeBlocks
-  };
+const newGame = {
+  id: Date.now().toString(),
+  name,
+  description,
+  creator: creator || "Unknown",
+  creatorId: creatorId || null,
+  image: "https://picsum.photos/300/180",
+  blocks: safeBlocks
+};
 
   games.push(newGame);
   saveGames(games);
@@ -225,6 +227,62 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
       username: user.username,
       avatar: user.avatar
     }
+  });
+});
+
+app.get("/game/:id", (req, res) => {
+  const game = getGames().find(g => g.id === req.params.id);
+
+  if (!game) {
+    return res.status(404).json({ error: "Game not found" });
+  }
+
+  res.json(game);
+});
+
+app.post("/delete-game", (req, res) => {
+  const { gameId, userId } = req.body;
+
+  const games = getGames();
+  const game = games.find(g => g.id === gameId);
+
+  if (!game) {
+    return res.status(404).json({ error: "Game not found" });
+  }
+
+  if (game.creatorId !== userId) {
+    return res.status(403).json({ error: "You do not own this game" });
+  }
+
+  saveGames(games.filter(g => g.id !== gameId));
+
+  res.json({ success: true });
+});
+
+app.post("/update-game", (req, res) => {
+  const { gameId, userId, name, description, blocks } = req.body;
+
+  const games = getGames();
+  const game = games.find(g => g.id === gameId);
+
+  if (!game) {
+    return res.status(404).json({ error: "Game not found" });
+  }
+
+  if (game.creatorId !== userId) {
+    return res.status(403).json({ error: "You do not own this game" });
+  }
+
+  game.name = name;
+  game.description = description;
+  game.blocks = blocks;
+
+  saveGames(games);
+
+  res.json({
+    success: true,
+    game,
+    playUrl: `https://elayblox-server.onrender.com/play/${game.id}`
   });
 });
 
