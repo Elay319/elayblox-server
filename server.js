@@ -557,6 +557,7 @@ checkpoint = {
   x: mesh.position.x,
   y: mesh.position.y + b.h / 2 + 2,
   z: mesh.position.z
+  }
 };
 
 if (b.script === "coin") {
