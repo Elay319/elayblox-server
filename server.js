@@ -688,6 +688,11 @@ function update(){
     lastSent = now;
   }
 }
+function loop(){
+  update();
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
 loop();
 </script>
 </body>
