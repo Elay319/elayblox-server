@@ -600,49 +600,55 @@ function update(){
       velY = 0;
       grounded = true;
 
-      if (b.script === "bounce") velY = .45;
+      if (b.script === "bounce") {
+        velY = .45;
+      }
+
       if (b.script === "speed") {
-  speedBoostUntil = Date.now() + 3000;
-}
+        speedBoostUntil = Date.now() + 3000;
+      }
 
-if (b.script === "teleport") {
-  player.position.set(0, 5, 0);
-  velY = 0;
-}
+      if (b.script === "teleport") {
+        player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
+        velY = 0;
+      }
 
-if (b.script === "checkpoint") {
-checkpoint = {
-  x: mesh.position.x,
-  y: mesh.position.y + b.h / 2 + 2,
-  z: mesh.position.z
-  }
-};
+      if (b.script === "checkpoint") {
+        checkpoint = {
+          x: mesh.position.x,
+          y: mesh.position.y + b.h / 2 + 2,
+          z: mesh.position.z
+        };
+      }
 
-if (b.script === "coin") {
-  const coinId = mesh.uuid;
+      if (b.script === "coin") {
+        const coinId = mesh.uuid;
 
-  if (!collectedCoins.has(coinId)) {
-    collectedCoins.add(coinId);
-    coins += 1;
-    scene.remove(mesh);
+        if (!collectedCoins.has(coinId)) {
+          collectedCoins.add(coinId);
+          coins += 1;
+          scene.remove(mesh);
 
-    document.getElementById("status").textContent =
-  "HP: 100 | Coins: " + coins;
-  }
-}
+          document.getElementById("status").textContent =
+            "HP: " + hp + " | Coins: " + coins;
+        }
+      }
 
-if (b.script === "kill") {
-  player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
-  velY = 0;
-}
+      if (b.script === "kill") {
+        player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
+        velY = 0;
+      }
+
       if (b.script === "damage") {
         hp -= 1;
-        document.getElementById("status").textContent = "HP: " + hp;
+        document.getElementById("status").textContent =
+          "HP: " + hp + " | Coins: " + coins;
 
         if (hp <= 0) {
           player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
           hp = 100;
-          document.getElementById("status").textContent = "HP: 100";
+          document.getElementById("status").textContent =
+            "HP: 100 | Coins: " + coins;
         }
       }
 
@@ -654,15 +660,21 @@ if (b.script === "kill") {
     }
   }
 
-if (player.position.y < -20) {
-  player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);
-  velY = 0;
-}
+  if (player.position.y < -20) {
+    player.position.set(checkpoint.x, checkpoint.y, checkpoint.z);
+    velY = 0;
+  }
 
-  camera.position.set(player.position.x + 8, player.position.y + 6, player.position.z + 10);
+  camera.position.set(
+    player.position.x + 8,
+    player.position.y + 6,
+    player.position.z + 10
+  );
+
   camera.lookAt(player.position);
 
   const now = Date.now();
+
   if (now - lastSent > 50) {
     socket.emit("playerMove", {
       gameId,
@@ -672,16 +684,10 @@ if (player.position.y < -20) {
       y: player.position.y,
       z: player.position.z
     });
+
     lastSent = now;
   }
 }
-
-function loop(){
-  update();
-  renderer.render(scene,camera);
-  requestAnimationFrame(loop);
-}
-
 loop();
 </script>
 </body>
