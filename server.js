@@ -178,7 +178,7 @@ app.post("/publish-block-game", (req, res) => {
 
   tpTarget: b.tpTarget || null
 }));
-
+const games = getGames();
 const newGame = {
   id: Date.now().toString(),
   name,
