@@ -155,31 +155,29 @@ app.post("/publish-block-game", (req, res) => {
     return res.status(400).json({ error: "Add at least 1 block" });
   }
 
-  const safeBlocks = blocks.slice(0, 300).map(b => ({
-    type: "block",
-    x: Number(b.x) || 0,
-    y: Number(b.y) || 0,
-    z: Number(b.z) || 0,
-    w: Math.max(1, Math.min(50, Number(b.w) || 4)),
-    h: Math.max(1, Math.min(50, Number(b.h) || 1)),
-    d: Math.max(1, Math.min(50, Number(b.d) || 4)),
-    color: String(b.color || "green").slice(0, 20),
-   script: [
-  "normal",
-  "bounce",
-  "win",
-  "damage",
-  "speed",
-  "teleport",
-  "checkpoint",
-  "coin",
-  "kill"
-].includes(b.script)
-  ? b.script
-  : "normal"
-  }));
+  const safeBlocks = blocks.slice(0, 1000).map(b => ({
+  id: String(b.id || ""),
+  type: String(b.type || "block"),
+  name: String(b.name || "Object"),
 
-  const games = getGames();
+  x: Number(b.x) || 0,
+  y: Number(b.y) || 0,
+  z: Number(b.z) || 0,
+
+  w: Math.max(1, Math.min(50, Number(b.w) || 4)),
+  h: Math.max(0.2, Math.min(50, Number(b.h) || 1)),
+  d: Math.max(1, Math.min(50, Number(b.d) || 4)),
+
+  color: String(b.color || "green").slice(0,20),
+
+  script: String(b.script || "normal"),
+
+  scripts: Array.isArray(b.scripts)
+    ? b.scripts.slice(0,20)
+    : [],
+
+  tpTarget: b.tpTarget || null
+}));
 
 const newGame = {
   id: Date.now().toString(),
