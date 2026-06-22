@@ -318,6 +318,12 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <p>WASD move | Space jump</p>
   <p id="status">HP: 100 | Coins: 0</p>
   <p id="players">Players: 1</p>
+  <p>
+  <a style="color:white;background:#ef4444;padding:8px 12px;border-radius:8px;text-decoration:none;display:inline-block"
+     href="https://elay319.github.io/elayblox/play.html">
+    🚪 Exit Game
+  </a>
+</p>
 </div>
 
 <div id="mobileControls">
