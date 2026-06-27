@@ -860,7 +860,7 @@ const moving =
 
 animateAvatar(player, moving, !grounded);
 
-  const speed = Date.now() < speedBoostUntil ? .22 : .12;
+  const speed = Date.now() < speedBoostUntil ? .16 : .8;
 
 if (keys["w"]) {
   player.position.x += Math.sin(camYaw) * speed;
