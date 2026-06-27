@@ -844,12 +844,12 @@ if (keys["s"]) {
   player.position.z -= Math.cos(camYaw) * speed;
 }
 
-if (keys["a"]) {
+if (keys["d"]) {
   player.position.x -= Math.cos(camYaw) * speed;
   player.position.z += Math.sin(camYaw) * speed;
 }
 
-if (keys["d"]) {
+if (keys["a"]) {
   player.position.x += Math.cos(camYaw) * speed;
   player.position.z -= Math.sin(camYaw) * speed;
 }
