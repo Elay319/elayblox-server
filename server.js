@@ -670,11 +670,12 @@ if (otherPlayers[data.id].avatar) {
 socket.on("playerLeft", id => {
   if (!otherPlayers[id]) return;
 
-scene.remove(otherPlayers[id].mesh);
-scene.remove(otherPlayers[id].label);
+  scene.remove(otherPlayers[id].mesh);
+  scene.remove(otherPlayers[id].label);
 
-delete otherPlayers[id];
-updatePlayerCount();
+  delete otherPlayers[id];
+  updatePlayerCount();
+});
 
 const keys = {};
 let velY = 0;
