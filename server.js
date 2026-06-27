@@ -348,6 +348,9 @@ const socket = io();
 const params = new URLSearchParams(window.location.search);
 const username = params.get("username") || "Guest";
 const avatar = params.get("avatar") || "";
+const shirtColor = params.get("shirtColor") || "red";
+const skinColor = params.get("skinColor") || "peachpuff";
+const pantsColor = params.get("pantsColor") || "black";
 
 let hp = 100;
 let coins = 0;
@@ -450,33 +453,6 @@ function createAvatar(shirtColor){
   return group;
 }
 
-const head = new THREE.Mesh(
-    new THREE.BoxGeometry(0.7,0.7,0.7),
-    headMat
-);
-
-group.userData.face = head;
-  head.position.y = 0.95;
-
-  const leftLeg = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 0.8, 0.35),
-    new THREE.MeshStandardMaterial({color:"black"})
-  );
-  leftLeg.position.set(-0.25, -1, 0);
-
-  const rightLeg = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 0.8, 0.35),
-    new THREE.MeshStandardMaterial({color:"black"})
-  );
-  rightLeg.position.set(0.25, -1, 0);
-
-  group.add(body);
-  group.add(head);
-  group.add(leftLeg);
-  group.add(rightLeg);
-
-  return group;
-}
 
 const player = createAvatar("red");
 
@@ -486,8 +462,8 @@ if (avatar) {
     loader.load(
         avatar,
         texture => {
-            player.userData.face.material.map = texture;
-            player.userData.face.material.needsUpdate = true;
+            player.userData.parts.face.material.map = texture;
+            player.userData.parts.face.material.needsUpdate = true;
         },
         undefined,
         () => {
@@ -527,8 +503,8 @@ function createOtherPlayer(id, name, avatarUrl) {
     const loader = new THREE.TextureLoader();
 
     loader.load(avatarUrl, texture => {
-        mesh.userData.face.material.map = texture;
-        mesh.userData.face.material.needsUpdate = true;
+        mesh.userData.parts.face.material.map = texture;
+        mesh.userData.parts.face.material.needsUpdate = true;
     });
 }
   mesh.position.set(0,5,0);
@@ -564,7 +540,7 @@ function updatePlayerCount() {
     "Players: " + (Object.keys(otherPlayers).length + 1);
 }
 
-socket.emit("joinGame", {gameId, username, avatar});
+socket.emit("joinGame", {gameId, username, avatar,shirtColor,skinColor,pantsColor});
 
 const chatInput = document.getElementById("chatInput");
 const chatMessages = document.getElementById("chatMessages");
@@ -611,14 +587,21 @@ socket.on("playerMove", data => {
   if (data.id === socket.id) return;
 
   createOtherPlayer(data.id, data.username, data.avatar);
+otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
 
-  otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
-  otherPlayers[data.id].label.position.set(data.x, data.y + 1.7, data.z);
+otherPlayers[data.id].label.position.set(
+    data.x,
+    data.y + 2.5,
+    data.z
+);
 
-  if (otherPlayers[data.id].avatar) {
-    otherPlayers[data.id].avatar.position.set(data.x, data.y + 2.8, data.z);
-  }
-});
+if (otherPlayers[data.id].avatar) {
+    otherPlayers[data.id].avatar.position.set(
+        data.x,
+        data.y + 3.3,
+        data.z
+    );
+}
 
 socket.on("playerLeft", id => {
   if (!otherPlayers[id]) return;
@@ -711,7 +694,7 @@ function update(){
     const b = mesh.userData.block;
 
     if (intersects(player, mesh) && velY <= 0) {
-      player.position.y = mesh.position.y + b.h / 2 + 1;
+      player.position.y = mesh.position.y + b.h / 2 + 1.45;
       velY = 0;
       grounded = true;
 
