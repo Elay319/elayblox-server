@@ -772,26 +772,21 @@ document.addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
 });
 document.addEventListener("keydown", e => {
-  if (e.code === "ShiftLeft") {
+    if (e.code !== "ShiftLeft") return;
+
     camLock = !camLock;
 
     if (camLock) {
-      document.body.requestPointerLock();
+        document.body.requestPointerLock();
+        document.body.style.cursor = "none";
     } else {
-      document.exitPointerLock();
+        document.exitPointerLock();
+        document.body.style.cursor = "default";
     }
 
     document.getElementById("camlockStatus").textContent =
-      "CamLock: " + (camLock ? "ON" : "OFF");
-  }
+        "CamLock: " + (camLock ? "ON" : "OFF");
 });
-document.addEventListener("pointerlockchange", () => {
-  if (document.pointerLockElement !== document.body) {
-    camLock = false;
-    document.getElementById("camlockStatus").textContent = "CamLock: OFF";
-  }
-});
-
 document.addEventListener("keyup", e => {
   if (document.activeElement === chatInput) return;
   keys[e.key.toLowerCase()] = false;
@@ -819,6 +814,15 @@ function holdButton(id,key){
     e.preventDefault();
     keys[key] = false;
   });
+
+document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement !== document.body) {
+        camLock = false;
+        document.body.style.cursor = "default";
+        document.getElementById("camlockStatus").textContent =
+            "CamLock: OFF";
+    }
+});
 
   btn.addEventListener("mouseleave", () => keys[key] = false);
 }
