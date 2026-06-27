@@ -579,10 +579,13 @@ function createOtherPlayer(
     label.position.set(0,7,0);
     scene.add(label);
 
-    otherPlayers[id] = {
-        mesh,
-        label
-    };
+otherPlayers[id] = {
+    mesh,
+    label,
+    lastX: 0,
+    lastY: 5,
+    lastZ: 0
+};
 
     updatePlayerCount();
 }
@@ -659,22 +662,29 @@ socket.on("playerMove", data => {
     data.skinColor,
     data.pantsColor
 );
-otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
-const dx =
-    Math.abs(data.x - otherPlayers[data.id].mesh.position.x);
+const op = otherPlayers[data.id];
 
-const dz =
-    Math.abs(data.z - otherPlayers[data.id].mesh.position.z);
+const dx = Math.abs(data.x - op.lastX);
+const dy = Math.abs(data.y - op.lastY);
+const dz = Math.abs(data.z - op.lastZ);
 
 animateAvatar(
-    otherPlayers[data.id].mesh,
-    dx > 0.001 || dz > 0.001
+    op.mesh,
+    dx > 0.01 || dz > 0.01,
+    dy > 0.05
 );
-otherPlayers[data.id].label.position.set(
+
+op.mesh.position.set(data.x, data.y, data.z);
+
+op.label.position.set(
     data.x,
     data.y + 3.2,
     data.z
 );
+
+op.lastX = data.x;
+op.lastY = data.y;
+op.lastZ = data.z;
 
 if (otherPlayers[data.id].avatar) {
     otherPlayers[data.id].avatar.position.set(
@@ -766,7 +776,7 @@ const moving =
   keys["a"] ||
   keys["d"];
 
-animateAvatar(player, moving);
+animateAvatar(player, moving, !grounded);
 
   const speed = Date.now() < speedBoostUntil ? .22 : .12;
 
