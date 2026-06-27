@@ -496,47 +496,36 @@ function createAvatar(shirtColor, skinColor, pantsColor){
   return group;
 }
 
-function animateAvatar(model, moving){
+function animateAvatar(model, moving, jumping){
   if (!model || !model.userData.parts) return;
 
   const p = model.userData.parts;
+  const t = Date.now() * 0.012;
+
+  if (jumping) {
+    p.leftArm.rotation.x = -0.9;
+    p.rightArm.rotation.x = -0.9;
+    p.leftLeg.rotation.x = 0.25;
+    p.rightLeg.rotation.x = 0.25;
+    return;
+  }
 
   if (moving) {
-    const t = Date.now() * 0.01;
+    p.leftArm.rotation.x = Math.sin(t) * 0.8;
+    p.rightArm.rotation.x = -Math.sin(t) * 0.8;
 
-    p.leftArm.rotation.x = Math.sin(t) * 0.6;
-    p.rightArm.rotation.x = -Math.sin(t) * 0.6;
+    p.leftLeg.rotation.x = -Math.sin(t) * 0.7;
+    p.rightLeg.rotation.x = Math.sin(t) * 0.7;
 
-    p.leftLeg.rotation.x = -Math.sin(t) * 0.5;
-    p.rightLeg.rotation.x = Math.sin(t) * 0.5;
+    p.torso.rotation.y = Math.sin(t) * 0.05;
   } else {
-    p.leftArm.rotation.x *= 0.8;
-    p.rightArm.rotation.x *= 0.8;
-    p.leftLeg.rotation.x *= 0.8;
-    p.rightLeg.rotation.x *= 0.8;
+    p.leftArm.rotation.x *= 0.75;
+    p.rightArm.rotation.x *= 0.75;
+    p.leftLeg.rotation.x *= 0.75;
+    p.rightLeg.rotation.x *= 0.75;
+    p.torso.rotation.y *= 0.75;
   }
 }
-const player = createAvatar(shirtColor, skinColor, pantsColor);
-
-if (avatar) {
-    const loader = new THREE.TextureLoader();
-
-    loader.load(
-        avatar,
-        texture => {
-            player.userData.parts.face.material.map = texture;
-            player.userData.parts.face.material.needsUpdate = true;
-        },
-        undefined,
-        () => {
-            console.log("Avatar failed to load.");
-        }
-    );
-}
-player.position.set(0,5,0);
-scene.add(player);
-
-const otherPlayers = {};
 
 function makeNameLabel(name) {
   const canvas = document.createElement("canvas");
