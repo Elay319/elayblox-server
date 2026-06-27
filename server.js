@@ -387,17 +387,68 @@ for (const b of blocks) {
   blockMeshes.push(mesh);
 }
 
-function createAvatar(color){
+function createAvatar(shirtColor){
   const group = new THREE.Group();
 
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1.2, 0.5),
-    new THREE.MeshStandardMaterial({color})
+  const skinColor = "peachpuff";
+  const pantsColor = "black";
+
+  function part(w,h,d,color,x,y,z){
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w,h,d),
+      new THREE.MeshStandardMaterial({color})
+    );
+    mesh.position.set(x,y,z);
+    group.add(mesh);
+    return mesh;
+  }
+
+  const torso = part(1,1.1,0.45,shirtColor,0,0.2,0);
+  const head = part(0.7,0.7,0.7,skinColor,0,1.15,0);
+
+  const leftArm = part(0.3,1,0.3,skinColor,-0.75,0.15,0);
+  const rightArm = part(0.3,1,0.3,skinColor,0.75,0.15,0);
+
+  const leftLeg = part(0.35,0.9,0.35,pantsColor,-0.25,-0.85,0);
+  const rightLeg = part(0.35,0.9,0.35,pantsColor,0.25,-0.85,0);
+
+  const faceCanvas = document.createElement("canvas");
+  faceCanvas.width = 128;
+  faceCanvas.height = 128;
+  const ctx = faceCanvas.getContext("2d");
+
+  ctx.fillStyle = skinColor;
+  ctx.fillRect(0,0,128,128);
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(35,45,12,12);
+  ctx.fillRect(80,45,12,12);
+
+  ctx.fillRect(45,85,38,8);
+
+  const faceTexture = new THREE.CanvasTexture(faceCanvas);
+  const faceMat = new THREE.MeshStandardMaterial({map:faceTexture});
+
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.62,0.62),
+    faceMat
   );
-  body.position.y = 0;
-const headMat = new THREE.MeshStandardMaterial({
-    color:"white"
-});
+
+  face.position.set(0,1.15,0.356);
+  group.add(face);
+
+  group.userData.parts = {
+    torso,
+    head,
+    leftArm,
+    rightArm,
+    leftLeg,
+    rightLeg,
+    face
+  };
+
+  return group;
+}
 
 const head = new THREE.Mesh(
     new THREE.BoxGeometry(0.7,0.7,0.7),
