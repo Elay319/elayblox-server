@@ -395,11 +395,16 @@ function createAvatar(color){
     new THREE.MeshStandardMaterial({color})
   );
   body.position.y = 0;
+const headMat = new THREE.MeshStandardMaterial({
+    color:"white"
+});
 
-  const head = new THREE.Mesh(
-    new THREE.BoxGeometry(0.7, 0.7, 0.7),
-    new THREE.MeshStandardMaterial({color:"peachpuff"})
-  );
+const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7,0.7,0.7),
+    headMat
+);
+
+group.userData.face = head;
   head.position.y = 0.95;
 
   const leftLeg = new THREE.Mesh(
@@ -423,6 +428,22 @@ function createAvatar(color){
 }
 
 const player = createAvatar("red");
+
+if (avatar) {
+    const loader = new THREE.TextureLoader();
+
+    loader.load(
+        avatar,
+        texture => {
+            player.userData.face.material.map = texture;
+            player.userData.face.material.needsUpdate = true;
+        },
+        undefined,
+        () => {
+            console.log("Avatar failed to load.");
+        }
+    );
+}
 player.position.set(0,5,0);
 scene.add(player);
 
@@ -450,11 +471,17 @@ function createOtherPlayer(id, name, avatarUrl) {
   if (id === socket.id) return;
   if (otherPlayers[id]) return;
 
-  const geo = new THREE.BoxGeometry(1,2,1);
-  const mat = new THREE.MeshStandardMaterial({color:"blue"});
-  const mesh = new THREE.Mesh(geo,mat);
+  const mesh = createAvatar("blue");
+  if (avatarUrl) {
+    const loader = new THREE.TextureLoader();
+
+    loader.load(avatarUrl, texture => {
+        mesh.userData.face.material.map = texture;
+        mesh.userData.face.material.needsUpdate = true;
+    });
+}
   mesh.position.set(0,5,0);
-  scene.add(mesh);
+  scene.add(mesh);;
 
   const label = makeNameLabel(name);
   label.position.set(0,7,0);
