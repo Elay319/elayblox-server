@@ -544,51 +544,40 @@ function createOtherPlayer(
     shirtColor,
     skinColor,
     pantsColor
-)
-  if (id === socket.id) return;
-  if (otherPlayers[id]) return;
+) {
 
-  const mesh = createAvatar(
-    shirtColor,
-    skinColor,
-    pantsColor
-);
-  if (avatarUrl) {
-    const loader = new THREE.TextureLoader();
+    if (id === socket.id) return;
+    if (otherPlayers[id]) return;
 
-    loader.load(avatarUrl, texture => {
-        mesh.userData.parts.face.material.map = texture;
-        mesh.userData.parts.face.material.needsUpdate = true;
-    });
+    const mesh = createAvatar(
+        shirtColor,
+        skinColor,
+        pantsColor
+    );
+
+    if (avatarUrl) {
+        const loader = new THREE.TextureLoader();
+
+        loader.load(avatarUrl, texture => {
+            mesh.userData.parts.face.material.map = texture;
+            mesh.userData.parts.face.material.needsUpdate = true;
+        });
+    }
+
+    mesh.position.set(0,5,0);
+    scene.add(mesh);
+
+    const label = makeNameLabel(name);
+    label.position.set(0,7,0);
+    scene.add(label);
+
+    otherPlayers[id] = {
+        mesh,
+        label
+    };
+
+    updatePlayerCount();
 }
-  mesh.position.set(0,5,0);
-  scene.add(mesh);;
-
-  const label = makeNameLabel(name);
-  label.position.set(0,7,0);
-  scene.add(label);
-
-  let avatarSprite = null;
-
-  if (avatarUrl) {
-    const loader = new THREE.TextureLoader();
-    loader.load(avatarUrl, texture => {
-      const avatarMat = new THREE.SpriteMaterial({map:texture});
-      avatarSprite = new THREE.Sprite(avatarMat);
-      avatarSprite.scale.set(1.5,1.5,1);
-      avatarSprite.position.set(0,8,0);
-      scene.add(avatarSprite);
-
-      if (otherPlayers[id]) {
-        otherPlayers[id].avatar = avatarSprite;
-      }
-    });
-  }
-
-  otherPlayers[id] = { mesh, label, avatar: avatarSprite };
-  updatePlayerCount();
-}
-
 function updatePlayerCount() {
   document.getElementById("players").textContent =
     "Players: " + (Object.keys(otherPlayers).length + 1);
@@ -622,7 +611,14 @@ socket.on("chatMessage", data => {
 socket.on("currentPlayers", players => {
   for (const id in players) {
     if (id !== socket.id) {
-      createOtherPlayer(id, players[id].username, players[id].avatar);
+      createOtherPlayer(
+    id,
+    players[id].username,
+    players[id].avatar,
+    players[id].shirtColor,
+    players[id].skinColor,
+    players[id].pantsColor
+);
       otherPlayers[id].mesh.position.set(players[id].x, players[id].y, players[id].z);
       otherPlayers[id].label.position.set(players[id].x, players[id].y + 1.7, players[id].z);
 
@@ -634,18 +630,32 @@ socket.on("currentPlayers", players => {
 });
 
 socket.on("playerJoined", data => {
-  createOtherPlayer(data.id, data.username, data.avatar);
+    createOtherPlayer(
+        data.id,
+        data.username,
+        data.avatar,
+        data.shirtColor,
+        data.skinColor,
+        data.pantsColor
+    );
 });
 
 socket.on("playerMove", data => {
   if (data.id === socket.id) return;
 
-  createOtherPlayer(data.id, data.username, data.avatar);
+  createOtherPlayer(
+    data.id,
+    data.username,
+    data.avatar,
+    data.shirtColor,
+    data.skinColor,
+    data.pantsColor
+);
 otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
 
 otherPlayers[data.id].label.position.set(
     data.x,
-    data.y + 2.5,
+    data.y + 3.2,
     data.z
 );
 
@@ -660,20 +670,16 @@ if (otherPlayers[data.id].avatar) {
 socket.on("playerLeft", id => {
   if (!otherPlayers[id]) return;
 
-  scene.remove(otherPlayers[id].mesh);
-  scene.remove(otherPlayers[id].label);
+scene.remove(otherPlayers[id].mesh);
+scene.remove(otherPlayers[id].label);
 
-  if (otherPlayers[id].avatar) {
-    scene.remove(otherPlayers[id].avatar);
-  }
-
-  delete otherPlayers[id];
-  updatePlayerCount();
-});
+delete otherPlayers[id];
+updatePlayerCount();
 
 const keys = {};
 let velY = 0;
 let grounded = false;
+});
 
 document.addEventListener("keydown", e => {
   if (document.activeElement === chatInput) return;
@@ -926,7 +932,7 @@ socket.to(gameId).emit("playerJoined", {
     y: Number(data.y) || 0,
     z: Number(data.z) || 0
 });
-
+});
   socket.on("chatMessage", data => {
     const gameId = data.gameId || socket.gameId;
     if (!gameId) return;
