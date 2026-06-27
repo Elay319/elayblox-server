@@ -110,30 +110,12 @@ const newUser = {
   skinColor: req.body.skinColor || "peachpuff",
   pantsColor: req.body.pantsColor || "black",
 
+  friends: [],
+  friendRequests: [],
+  currentGameId: null,
+
   createdAt: new Date().toISOString()
 };
-
-  users.push(newUser);
-  saveUsers(users);
-
-res.json({
-  success: true,
-  user: {
-    id: newUser.id,
-    username: newUser.username,
-    avatar: newUser.avatar,
-    shirtColor: newUser.shirtColor,
-    skinColor: newUser.skinColor,
-    pantsColor: newUser.pantsColor
-
-    friends: [],
-    friendRequests: [],
-    currentGameId: null,
-  }
-});
-
-});
-
 app.post("/login", (req, res) => {
 
   const { username, password } = req.body;
