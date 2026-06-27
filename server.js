@@ -527,6 +527,31 @@ function animateAvatar(model, moving, jumping){
   }
 }
 
+const player = createAvatar(
+    shirtColor,
+    skinColor,
+    pantsColor
+);
+
+if (avatar) {
+    const loader = new THREE.TextureLoader();
+
+    loader.load(
+        avatar,
+        texture => {
+            player.userData.parts.face.material.map = texture;
+            player.userData.parts.face.material.needsUpdate = true;
+        },
+        undefined,
+        () => console.log("Avatar failed to load.")
+    );
+}
+
+player.position.set(0, 5, 0);
+scene.add(player);
+
+const otherPlayers = {};
+
 function makeNameLabel(name) {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
