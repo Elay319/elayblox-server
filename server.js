@@ -125,6 +125,10 @@ res.json({
     shirtColor: newUser.shirtColor,
     skinColor: newUser.skinColor,
     pantsColor: newUser.pantsColor
+
+    friends: [],
+    friendRequests: [],
+    currentGameId: null,
   }
 });
 
@@ -324,6 +328,93 @@ app.post("/update-game", (req, res) => {
     game,
     playUrl: `https://elayblox-server.onrender.com/play/${game.id}`
   });
+});
+
+app.post("/send-friend-request", (req, res) => {
+  const { fromUserId, toUsername } = req.body;
+
+  const users = getUsers();
+  const fromUser = users.find(u => u.id === fromUserId);
+  const toUser = users.find(u => u.username.toLowerCase() === String(toUsername).toLowerCase());
+
+  if (!fromUser) return res.status(404).json({ error: "Your user was not found" });
+  if (!toUser) return res.status(404).json({ error: "User not found" });
+  if (fromUser.id === toUser.id) return res.status(400).json({ error: "You cannot friend yourself" });
+
+  fromUser.friends = fromUser.friends || [];
+  toUser.friendRequests = toUser.friendRequests || [];
+
+  if (fromUser.friends.includes(toUser.id)) {
+    return res.status(400).json({ error: "Already friends" });
+  }
+
+  if (!toUser.friendRequests.includes(fromUser.id)) {
+    toUser.friendRequests.push(fromUser.id);
+  }
+
+  saveUsers(users);
+  res.json({ success: true });
+});
+
+app.post("/accept-friend-request", (req, res) => {
+  const { userId, fromUserId } = req.body;
+
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+  const fromUser = users.find(u => u.id === fromUserId);
+
+  if (!user || !fromUser) return res.status(404).json({ error: "User not found" });
+
+  user.friends = user.friends || [];
+  fromUser.friends = fromUser.friends || [];
+  user.friendRequests = user.friendRequests || [];
+
+  user.friendRequests = user.friendRequests.filter(id => id !== fromUserId);
+
+  if (!user.friends.includes(fromUserId)) user.friends.push(fromUserId);
+  if (!fromUser.friends.includes(userId)) fromUser.friends.push(userId);
+
+  saveUsers(users);
+  res.json({ success: true });
+});
+
+app.get("/friends/:userId", (req, res) => {
+  const users = getUsers();
+  const user = users.find(u => u.id === req.params.userId);
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const friends = (user.friends || []).map(id => users.find(u => u.id === id)).filter(Boolean);
+  const requests = (user.friendRequests || []).map(id => users.find(u => u.id === id)).filter(Boolean);
+
+  res.json({
+    success: true,
+    friends: friends.map(u => ({
+      id: u.id,
+      username: u.username,
+      avatar: u.avatar,
+      currentGameId: u.currentGameId || null
+    })),
+    requests: requests.map(u => ({
+      id: u.id,
+      username: u.username,
+      avatar: u.avatar
+    }))
+  });
+});
+
+app.post("/set-current-game", (req, res) => {
+  const { userId, gameId } = req.body;
+
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  user.currentGameId = gameId || null;
+  saveUsers(users);
+
+  res.json({ success: true });
 });
 
 app.get("/play/:id", (req, res) => {
@@ -653,6 +744,15 @@ function updatePlayerCount() {
 }
 
 socket.emit("joinGame", {gameId, username, avatar,shirtColor,skinColor,pantsColor});
+
+fetch("https://elayblox-server.onrender.com/set-current-game", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({
+    userId: new URLSearchParams(window.location.search).get("userId"),
+    gameId
+  })
+});
 
 const chatInput = document.getElementById("chatInput");
 const chatMessages = document.getElementById("chatMessages");
