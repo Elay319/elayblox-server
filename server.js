@@ -362,8 +362,9 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <a style="color:white;background:#ef4444;padding:8px 12px;border-radius:8px;text-decoration:none;display:inline-block"
      href="https://elay319.github.io/elayblox/play.html">
     🚪 Exit Game
-    document.getElementById("status").textContent =
-    `HP: ${hp} | Coins: ${coins} | ${camLock ? "🔒 CamLock" : ""}`;
+
+document.getElementById("status").textContent =
+    "HP: " + hp + " | Coins: " + coins + (camLock ? " | 🔒 CamLock" : "");
   </a>
 </p>
 </div>
