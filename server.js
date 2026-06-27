@@ -549,6 +549,35 @@ if (avatar) {
 
 player.position.set(0, 5, 0);
 scene.add(player);
+let camYaw = 0;
+let camPitch = 0.35;
+let camDistance = 10;
+let rightMouseDown = false;
+
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("mousedown", e => {
+    if (e.button === 2) rightMouseDown = true;
+});
+
+document.addEventListener("mouseup", e => {
+    if (e.button === 2) rightMouseDown = false;
+});
+
+document.addEventListener("mousemove", e => {
+    if (!rightMouseDown) return;
+
+    camYaw -= e.movementX * 0.005;
+    camPitch -= e.movementY * 0.005;
+
+    camPitch = Math.max(-0.2, Math.min(1.2, camPitch));
+});
+
+document.addEventListener("wheel", e => {
+    camDistance += e.deltaY * 0.01;
+    camDistance = Math.max(4, Math.min(18, camDistance));
+});
+
 
 const otherPlayers = {};
 
@@ -896,13 +925,30 @@ grounded = false;
     velY = 0;
   }
 
-  camera.position.set(
-    player.position.x + 8,
-    player.position.y + 6,
-    player.position.z + 10
-  );
+const camX =
+    player.position.x +
+    Math.sin(camYaw) * Math.cos(camPitch) * camDistance;
 
-  camera.lookAt(player.position);
+const camY =
+    player.position.y +
+    2 +
+    Math.sin(camPitch) * camDistance;
+
+const camZ =
+    player.position.z +
+    Math.cos(camYaw) * Math.cos(camPitch) * camDistance;
+
+camera.position.set(
+    camX,
+    camY,
+    camZ
+);
+
+camera.lookAt(
+    player.position.x,
+    player.position.y + 1.5,
+    player.position.z
+);
 
   const now = Date.now();
 
