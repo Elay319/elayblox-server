@@ -680,7 +680,7 @@ socket.on("playerLeft", id => {
 const keys = {};
 let velY = 0;
 let grounded = false;
-});
+
 
 document.addEventListener("keydown", e => {
   if (document.activeElement === chatInput) return;
