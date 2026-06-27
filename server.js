@@ -926,22 +926,24 @@ grounded = false;
   }
 
 const camX =
-    player.position.x +
-    Math.sin(camYaw) * Math.cos(camPitch) * camDistance;
+  player.position.x -
+  Math.sin(camYaw) * Math.cos(camPitch) * camDistance;
 
 const camY =
-    player.position.y +
-    2 +
-    Math.sin(camPitch) * camDistance;
+  player.position.y +
+  2 +
+  Math.sin(camPitch) * camDistance;
 
 const camZ =
-    player.position.z +
-    Math.cos(camYaw) * Math.cos(camPitch) * camDistance;
+  player.position.z -
+  Math.cos(camYaw) * Math.cos(camPitch) * camDistance;
 
-camera.position.set(
-    camX,
-    camY,
-    camZ
+camera.position.set(camX, camY, camZ);
+
+camera.lookAt(
+  player.position.x,
+  player.position.y + 1.4,
+  player.position.z
 );
 
 camera.lookAt(
