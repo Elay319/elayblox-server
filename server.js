@@ -84,6 +84,7 @@ app.get("/games", (req, res) => {
 app.post("/register", (req, res) => {
   const { username, password } = req.body;
 
+
   if (!username || username.length < 3 || username.length > 20) {
     return res.status(400).json({ error: "Username must be 3-20 characters" });
   }
@@ -98,28 +99,39 @@ app.post("/register", (req, res) => {
     return res.status(400).json({ error: "Username already exists" });
   }
 
-  const newUser = {
-    id: Date.now().toString(),
-    username,
-    passwordHash: hashPassword(password),
-    avatar: null,
-    createdAt: new Date().toISOString()
-  };
+const newUser = {
+  id: Date.now().toString(),
+  username,
+  passwordHash: hashPassword(password),
+
+  avatar: null,
+
+  shirtColor: req.body.shirtColor || "red",
+  skinColor: req.body.skinColor || "peachpuff",
+  pantsColor: req.body.pantsColor || "black",
+
+  createdAt: new Date().toISOString()
+};
 
   users.push(newUser);
   saveUsers(users);
 
-  res.json({
-    success: true,
-    user: {
-      id: newUser.id,
-      username: newUser.username,
-      avatar: newUser.avatar
-    }
-  });
+res.json({
+  success: true,
+  user: {
+    id: newUser.id,
+    username: newUser.username,
+    avatar: newUser.avatar,
+    shirtColor: newUser.shirtColor,
+    skinColor: newUser.skinColor,
+    pantsColor: newUser.pantsColor
+  }
+});
+
 });
 
 app.post("/login", (req, res) => {
+
   const { username, password } = req.body;
 
   const user = getUsers().find(
@@ -129,15 +141,18 @@ app.post("/login", (req, res) => {
   if (!user || user.passwordHash !== hashPassword(password)) {
     return res.status(400).json({ error: "Wrong username or password" });
   }
+res.json({
+  success: true,
+  user: {
+    id: user.id,
+    username: user.username,
+    avatar: user.avatar,
+    shirtColor: user.shirtColor,
+    skinColor: user.skinColor,
+    pantsColor: user.pantsColor
+  }
+});
 
-  res.json({
-    success: true,
-    user: {
-      id: user.id,
-      username: user.username,
-      avatar: user.avatar
-    }
-  });
 });
 
 app.post("/publish-block-game", (req, res) => {
@@ -236,6 +251,33 @@ app.get("/game/:id", (req, res) => {
   }
 
   res.json(game);
+});
+
+app.post("/update-avatar-style", (req, res) => {
+  const { userId, shirtColor, skinColor, pantsColor } = req.body;
+
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  user.shirtColor = shirtColor || user.shirtColor || "red";
+  user.skinColor = skinColor || user.skinColor || "peachpuff";
+  user.pantsColor = pantsColor || user.pantsColor || "black";
+
+  saveUsers(users);
+
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar,
+      shirtColor: user.shirtColor,
+      skinColor: user.skinColor,
+      pantsColor: user.pantsColor
+    }
+  });
 });
 
 app.post("/delete-game", (req, res) => {
@@ -390,11 +432,12 @@ for (const b of blocks) {
   blockMeshes.push(mesh);
 }
 
-function createAvatar(shirtColor){
+function createAvatar(shirtColor, skinColor, pantsColor){
   const group = new THREE.Group();
 
-  const skinColor = "peachpuff";
-  const pantsColor = "black";
+  shirtColor = shirtColor || "red";
+  skinColor = skinColor || "peachpuff";
+  pantsColor = pantsColor || "black";
 
   function part(w,h,d,color,x,y,z){
     const mesh = new THREE.Mesh(
@@ -454,7 +497,7 @@ function createAvatar(shirtColor){
 }
 
 
-const player = createAvatar("red");
+const player = createAvatar(shirtColor, skinColor, pantsColor);
 
 if (avatar) {
     const loader = new THREE.TextureLoader();
@@ -494,11 +537,22 @@ function makeNameLabel(name) {
   return sprite;
 }
 
-function createOtherPlayer(id, name, avatarUrl) {
+function createOtherPlayer(
+    id,
+    name,
+    avatarUrl,
+    shirtColor,
+    skinColor,
+    pantsColor
+)
   if (id === socket.id) return;
   if (otherPlayers[id]) return;
 
-  const mesh = createAvatar("blue");
+  const mesh = createAvatar(
+    shirtColor,
+    skinColor,
+    pantsColor
+);
   if (avatarUrl) {
     const loader = new THREE.TextureLoader();
 
@@ -602,7 +656,7 @@ if (otherPlayers[data.id].avatar) {
         data.z
     );
 }
-
+});
 socket.on("playerLeft", id => {
   if (!otherPlayers[id]) return;
 
@@ -780,7 +834,10 @@ function update(){
       avatar,
       x: player.position.x,
       y: player.position.y,
-      z: player.position.z
+      z: player.position.z,
+      shirtColor,
+      skinColor,
+      pantsColor
     });
 
     lastSent = now;
@@ -805,27 +862,38 @@ io.on("connection", socket => {
     const gameId = data.gameId || "default";
     const username = data.username || "Guest";
     const avatar = data.avatar || "";
+    const shirtColor = data.shirtColor || "red";
+    const skinColor = data.skinColor || "peachpuff";
+    const pantsColor = data.pantsColor || "black";
 
     socket.join(gameId);
     socket.gameId = gameId;
 
     if (!gameRooms[gameId]) gameRooms[gameId] = {};
 
-    gameRooms[gameId][socket.id] = {
-      username,
-      avatar,
-      x: 0,
-      y: 5,
-      z: 0
-    };
+gameRooms[gameId][socket.id] = {
+    username,
+    avatar,
+
+    shirtColor,
+    skinColor,
+    pantsColor,
+
+    x:0,
+    y:5,
+    z:0
+};
 
     socket.emit("currentPlayers", gameRooms[gameId]);
 
-    socket.to(gameId).emit("playerJoined", {
-      id: socket.id,
-      username,
-      avatar
-    });
+socket.to(gameId).emit("playerJoined", {
+    id: socket.id,
+    username,
+    avatar,
+    shirtColor,
+    skinColor,
+    pantsColor
+});
   });
 
   socket.on("playerMove", data => {
@@ -833,22 +901,31 @@ io.on("connection", socket => {
     if (!gameId || !gameRooms[gameId] || !gameRooms[gameId][socket.id]) return;
 
     gameRooms[gameId][socket.id] = {
-      username: data.username || "Guest",
-      avatar: data.avatar || "",
-      x: Number(data.x) || 0,
-      y: Number(data.y) || 0,
-      z: Number(data.z) || 0
-    };
+    username: data.username || "Guest",
+    avatar: data.avatar || "",
+
+    shirtColor: data.shirtColor || "red",
+    skinColor: data.skinColor || "peachpuff",
+    pantsColor: data.pantsColor || "black",
+
+    x: Number(data.x) || 0,
+    y: Number(data.y) || 0,
+    z: Number(data.z) || 0
+};
 
     socket.to(gameId).emit("playerMove", {
-      id: socket.id,
-      username: data.username || "Guest",
-      avatar: data.avatar || "",
-      x: Number(data.x) || 0,
-      y: Number(data.y) || 0,
-      z: Number(data.z) || 0
-    });
-  });
+    id: socket.id,
+    username: data.username || "Guest",
+    avatar: data.avatar || "",
+
+    shirtColor: data.shirtColor || "red",
+    skinColor: data.skinColor || "peachpuff",
+    pantsColor: data.pantsColor || "black",
+
+    x: Number(data.x) || 0,
+    y: Number(data.y) || 0,
+    z: Number(data.z) || 0
+});
 
   socket.on("chatMessage", data => {
     const gameId = data.gameId || socket.gameId;
