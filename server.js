@@ -362,6 +362,8 @@ body{margin:0;overflow:hidden;font-family:Arial;background:#111827;color:white}
   <a style="color:white;background:#ef4444;padding:8px 12px;border-radius:8px;text-decoration:none;display:inline-block"
      href="https://elay319.github.io/elayblox/play.html">
     🚪 Exit Game
+    document.getElementById("status").textContent =
+    `HP: ${hp} | Coins: ${coins} | ${camLock ? "🔒 CamLock" : ""}`;
   </a>
 </p>
 </div>
@@ -552,6 +554,7 @@ scene.add(player);
 let camYaw = 0;
 let camPitch = 0.35;
 let camDistance = 10;
+let camLock = false;
 let rightMouseDown = false;
 
 document.addEventListener("contextmenu", e => e.preventDefault());
@@ -768,6 +771,12 @@ document.addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
 });
 
+document.addEventListener("keydown", e => {
+    if (e.code === "ShiftLeft") {
+        camLock = !camLock;
+    }
+});
+
 document.addEventListener("keyup", e => {
   if (document.activeElement === chatInput) return;
   keys[e.key.toLowerCase()] = false;
@@ -852,6 +861,10 @@ if (keys["d"]) {
 if (keys["a"]) {
   player.position.x += Math.cos(camYaw) * speed;
   player.position.z -= Math.sin(camYaw) * speed;
+}
+
+if (camLock) {
+    player.rotation.y = camYaw;
 }
   
 
