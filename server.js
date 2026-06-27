@@ -747,9 +747,12 @@ function update(){
     grounded = false;
   }
 
+  if (!grounded) {
   velY -= .012;
-  player.position.y += velY;
-  grounded = false;
+}
+
+player.position.y += velY;
+grounded = false;
 
   for (const mesh of blockMeshes) {
     const b = mesh.userData.block;
