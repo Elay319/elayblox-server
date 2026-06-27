@@ -834,10 +834,25 @@ animateAvatar(player, moving, !grounded);
 
   const speed = Date.now() < speedBoostUntil ? .22 : .12;
 
-  if (keys["w"]) player.position.z -= speed;
-  if (keys["s"]) player.position.z += speed;
-  if (keys["a"]) player.position.x -= speed;
-  if (keys["d"]) player.position.x += speed;
+if (keys["w"]) {
+  player.position.x += Math.sin(camYaw) * speed;
+  player.position.z += Math.cos(camYaw) * speed;
+}
+
+if (keys["s"]) {
+  player.position.x -= Math.sin(camYaw) * speed;
+  player.position.z -= Math.cos(camYaw) * speed;
+}
+
+if (keys["a"]) {
+  player.position.x -= Math.cos(camYaw) * speed;
+  player.position.z += Math.sin(camYaw) * speed;
+}
+
+if (keys["d"]) {
+  player.position.x += Math.cos(camYaw) * speed;
+  player.position.z -= Math.sin(camYaw) * speed;
+}
   
 
   if (keys[" "] && grounded) {
