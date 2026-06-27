@@ -116,6 +116,25 @@ const newUser = {
 
   createdAt: new Date().toISOString()
 };
+
+users.push(newUser);
+saveUsers(users);
+
+res.json({
+  success: true,
+  user: {
+    id: newUser.id,
+    username: newUser.username,
+    avatar: newUser.avatar,
+    shirtColor: newUser.shirtColor,
+    skinColor: newUser.skinColor,
+    pantsColor: newUser.pantsColor
+  }
+});
+
+});
+
+app.post("/login", (req, res) => {
 app.post("/login", (req, res) => {
 
   const { username, password } = req.body;
