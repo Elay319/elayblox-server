@@ -724,10 +724,18 @@ holdButton("forward","w");
 holdButton("back","s");
 holdButton("jump"," ");
 
-function intersects(a,b){
-  const A = new THREE.Box3().setFromObject(a);
-  const B = new THREE.Box3().setFromObject(b);
-  return A.intersectsBox(B);
+const playerBox = new THREE.Box3();
+const blockBox = new THREE.Box3();
+const PLAYER_HEIGHT = 2.8;
+
+function intersectsBlock(mesh){
+  playerBox.setFromCenterAndSize(
+    player.position,
+    new THREE.Vector3(1, PLAYER_HEIGHT, 1)
+  );
+
+  blockBox.setFromObject(mesh);
+  return playerBox.intersectsBox(blockBox);
 }
 
 let lastSent = 0;
@@ -757,8 +765,8 @@ grounded = false;
   for (const mesh of blockMeshes) {
     const b = mesh.userData.block;
 
-    if (intersects(player, mesh) && velY <= 0) {
-      player.position.y = mesh.position.y + b.h / 2 + 1.45;
+    if (intersectsBlock(mesh) && velY <= 0) {
+      player.position.y = mesh.position.y + b.h / 2 + PLAYER_HEIGHT / 2;
       velY = 0;
       grounded = true;
 
