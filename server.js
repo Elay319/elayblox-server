@@ -387,9 +387,42 @@ for (const b of blocks) {
   blockMeshes.push(mesh);
 }
 
-const playerGeo = new THREE.BoxGeometry(1,2,1);
-const playerMat = new THREE.MeshStandardMaterial({color:"red"});
-const player = new THREE.Mesh(playerGeo, playerMat);
+function createAvatar(color){
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1.2, 0.5),
+    new THREE.MeshStandardMaterial({color})
+  );
+  body.position.y = 0;
+
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.7, 0.7),
+    new THREE.MeshStandardMaterial({color:"peachpuff"})
+  );
+  head.position.y = 0.95;
+
+  const leftLeg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.8, 0.35),
+    new THREE.MeshStandardMaterial({color:"black"})
+  );
+  leftLeg.position.set(-0.25, -1, 0);
+
+  const rightLeg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.8, 0.35),
+    new THREE.MeshStandardMaterial({color:"black"})
+  );
+  rightLeg.position.set(0.25, -1, 0);
+
+  group.add(body);
+  group.add(head);
+  group.add(leftLeg);
+  group.add(rightLeg);
+
+  return group;
+}
+
+const player = createAvatar("red");
 player.position.set(0,5,0);
 scene.add(player);
 
