@@ -568,14 +568,13 @@ document.addEventListener("mousedown", e => {
 document.addEventListener("mouseup", e => {
     if (e.button === 2) rightMouseDown = false;
 });
-
 document.addEventListener("mousemove", e => {
-    if (!rightMouseDown) return;
+  if (!rightMouseDown && !camLock) return;
 
-    camYaw -= e.movementX * 0.005;
-    camPitch -= e.movementY * 0.005;
+  camYaw -= e.movementX * 0.005;
+  camPitch -= e.movementY * 0.005;
 
-    camPitch = Math.max(-0.2, Math.min(1.2, camPitch));
+  camPitch = Math.max(-0.2, Math.min(1.2, camPitch));
 });
 
 document.addEventListener("wheel", e => {
@@ -772,11 +771,25 @@ document.addEventListener("keydown", e => {
   if (document.activeElement === chatInput) return;
   keys[e.key.toLowerCase()] = true;
 });
-
 document.addEventListener("keydown", e => {
-    if (e.code === "ShiftLeft") {
-        camLock = !camLock;
+  if (e.code === "ShiftLeft") {
+    camLock = !camLock;
+
+    if (camLock) {
+      document.body.requestPointerLock();
+    } else {
+      document.exitPointerLock();
     }
+
+    document.getElementById("camlockStatus").textContent =
+      "CamLock: " + (camLock ? "ON" : "OFF");
+  }
+});
+document.addEventListener("pointerlockchange", () => {
+  if (document.pointerLockElement !== document.body) {
+    camLock = false;
+    document.getElementById("camlockStatus").textContent = "CamLock: OFF";
+  }
 });
 
 document.addEventListener("keyup", e => {
