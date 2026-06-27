@@ -496,7 +496,26 @@ function createAvatar(shirtColor, skinColor, pantsColor){
   return group;
 }
 
+function animateAvatar(model, moving){
+  if (!model || !model.userData.parts) return;
 
+  const p = model.userData.parts;
+
+  if (moving) {
+    const t = Date.now() * 0.01;
+
+    p.leftArm.rotation.x = Math.sin(t) * 0.6;
+    p.rightArm.rotation.x = -Math.sin(t) * 0.6;
+
+    p.leftLeg.rotation.x = -Math.sin(t) * 0.5;
+    p.rightLeg.rotation.x = Math.sin(t) * 0.5;
+  } else {
+    p.leftArm.rotation.x *= 0.8;
+    p.rightArm.rotation.x *= 0.8;
+    p.leftLeg.rotation.x *= 0.8;
+    p.rightLeg.rotation.x *= 0.8;
+  }
+}
 const player = createAvatar(shirtColor, skinColor, pantsColor);
 
 if (avatar) {
@@ -652,7 +671,16 @@ socket.on("playerMove", data => {
     data.pantsColor
 );
 otherPlayers[data.id].mesh.position.set(data.x, data.y, data.z);
+const dx =
+    Math.abs(data.x - otherPlayers[data.id].mesh.position.x);
 
+const dz =
+    Math.abs(data.z - otherPlayers[data.id].mesh.position.z);
+
+animateAvatar(
+    otherPlayers[data.id].mesh,
+    dx > 0.001 || dz > 0.001
+);
 otherPlayers[data.id].label.position.set(
     data.x,
     data.y + 3.2,
@@ -742,6 +770,14 @@ let lastSent = 0;
 
 function update(){
   if (won) return;
+  
+const moving =
+  keys["w"] ||
+  keys["s"] ||
+  keys["a"] ||
+  keys["d"];
+
+animateAvatar(player, moving);
 
   const speed = Date.now() < speedBoostUntil ? .22 : .12;
 
@@ -749,6 +785,7 @@ function update(){
   if (keys["s"]) player.position.z += speed;
   if (keys["a"]) player.position.x -= speed;
   if (keys["d"]) player.position.x += speed;
+  
 
   if (keys[" "] && grounded) {
     velY = .28;
