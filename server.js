@@ -1193,6 +1193,22 @@ loop();
 const gameRooms = {};
 
 io.on("connection", socket => {
+
+  socket.on("leaveParty", data => {
+  const partyId = data.partyId;
+
+  if (!partyId) return;
+
+  socket.leave(partyId);
+
+  socket.to(partyId).emit("partyMemberLeft", {
+    userId: data.userId,
+    socketId: socket.id
+  });
+
+  socket.partyId = null;
+});
+  
   socket.on("joinGame", data => {
     const gameId = data.gameId || "default";
     const username = data.username || "Guest";
