@@ -786,6 +786,24 @@ function updatePlayerCount() {
     "Players: " + (Object.keys(otherPlayers).length + 1);
 }
 
+
+function leaveParty() {
+  if (!currentPartyId) {
+    showMsg("You are not in a party.");
+    return;
+  }
+
+  socket.emit("leaveParty", {
+    partyId: currentPartyId,
+    userId: user.id
+  });
+
+  currentPartyId = null;
+  members = [];
+  renderMembers();
+  showMsg("Left party.");
+}
+
 socket.emit("joinGame", {gameId, username, avatar,shirtColor,skinColor,pantsColor});
 
 fetch("https://elayblox-server.onrender.com/set-current-game", {
