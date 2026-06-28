@@ -1259,6 +1259,65 @@ socket.to(gameId).emit("playerJoined", {
     });
   });
 
+  socket.on("createParty", data => {
+  const userId = data.userId;
+  const username = data.username || "Guest";
+
+  const partyId = "party_" + Date.now() + "_" + Math.floor(Math.random() * 9999);
+
+  socket.join(partyId);
+  socket.partyId = partyId;
+  socket.userId = userId;
+  socket.username = username;
+
+  socket.emit("partyCreated", {
+    partyId,
+    members: [
+      {
+        userId,
+        username,
+        socketId: socket.id
+      }
+    ]
+  });
+});
+
+socket.on("inviteToParty", data => {
+  const { partyId, fromUserId, fromUsername, toUserId } = data;
+
+  for (const [id, s] of io.of("/").sockets) {
+    if (s.userId === toUserId) {
+      s.emit("partyInvite", {
+        partyId,
+        fromUserId,
+        fromUsername
+      });
+    }
+  }
+});
+
+socket.on("joinParty", data => {
+  const { partyId, userId, username } = data;
+
+  socket.join(partyId);
+  socket.partyId = partyId;
+  socket.userId = userId;
+  socket.username = username || "Guest";
+
+  io.to(partyId).emit("partyMemberJoined", {
+    userId,
+    username,
+    socketId: socket.id
+  });
+});
+
+socket.on("partyVoiceSignal", data => {
+  socket.to(data.partyId).emit("partyVoiceSignal", {
+    fromSocketId: socket.id,
+    signal: data.signal
+  });
+});
+
   socket.on("disconnect", () => {
     const gameId = socket.gameId;
 
