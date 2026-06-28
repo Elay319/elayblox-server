@@ -417,6 +417,49 @@ app.post("/set-current-game", (req, res) => {
   res.json({ success: true });
 });
 
+
+app.post("/send-message", (req, res) => {
+  const { fromUserId, toUserId, text } = req.body;
+
+  const users = getUsers();
+  const fromUser = users.find(u => u.id === fromUserId);
+  const toUser = users.find(u => u.id === toUserId);
+
+  if (!fromUser || !toUser) return res.status(404).json({ error: "User not found" });
+
+  fromUser.friends = fromUser.friends || [];
+  if (!fromUser.friends.includes(toUserId)) {
+    return res.status(403).json({ error: "You are not friends" });
+  }
+
+  const messagesFile = "messages.json";
+  const messages = readJson(messagesFile, []);
+
+  messages.push({
+    id: Date.now().toString(),
+    fromUserId,
+    toUserId,
+    text: String(text || "").slice(0, 300),
+    createdAt: new Date().toISOString()
+  });
+
+  writeJson(messagesFile, messages);
+
+  res.json({ success: true });
+});
+
+app.get("/messages/:userId/:friendId", (req, res) => {
+  const { userId, friendId } = req.params;
+  const messages = readJson("messages.json", []);
+
+  res.json({
+    success: true,
+    messages: messages.filter(m =>
+      (m.fromUserId === userId && m.toUserId === friendId) ||
+      (m.fromUserId === friendId && m.toUserId === userId)
+    )
+  });
+});
 app.get("/play/:id", (req, res) => {
   const game = getGames().find(g => g.id === req.params.id);
 
