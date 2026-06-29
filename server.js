@@ -1351,7 +1351,24 @@ socket.on("partyVoiceSignal", data => {
     signal: data.signal
   });
 });
+socket.on("joinVoice", data => {
+  const partyId = data.partyId;
+  if (!partyId) return;
 
+  socket.join("voice_" + partyId);
+  socket.voicePartyId = partyId;
+
+  socket.to("voice_" + partyId).emit("voiceUserJoined", socket.id);
+});
+
+socket.on("voiceSignal", data => {
+  if (!data.to) return;
+
+  io.to(data.to).emit("voiceSignal", {
+    from: socket.id,
+    signal: data.signal
+  });
+});
   socket.on("disconnect", () => {
     const gameId = socket.gameId;
 
