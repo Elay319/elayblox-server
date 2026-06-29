@@ -1355,10 +1355,19 @@ socket.on("joinVoice", data => {
   const partyId = data.partyId;
   if (!partyId) return;
 
-  socket.join("voice_" + partyId);
+  const room = "voice_" + partyId;
+
+  const existingSockets = io.sockets.adapter.rooms.get(room);
+  const existingIds = existingSockets
+    ? Array.from(existingSockets).filter(id => id !== socket.id)
+    : [];
+
+  socket.join(room);
   socket.voicePartyId = partyId;
 
-  socket.to("voice_" + partyId).emit("voiceUserJoined", socket.id);
+  socket.emit("voiceExistingUsers", existingIds);
+
+  socket.to(room).emit("voiceUserJoined", socket.id);
 });
 
 socket.on("voiceSignal", data => {
@@ -1370,13 +1379,17 @@ socket.on("voiceSignal", data => {
   });
 });
   socket.on("disconnect", () => {
-    const gameId = socket.gameId;
+  const gameId = socket.gameId;
 
-    if (gameId && gameRooms[gameId]) {
-      delete gameRooms[gameId][socket.id];
-      socket.to(gameId).emit("playerLeft", socket.id);
-    }
-  });
+  if (gameId && gameRooms[gameId]) {
+    delete gameRooms[gameId][socket.id];
+    socket.to(gameId).emit("playerLeft", socket.id);
+  }
+
+  if (socket.voicePartyId) {
+    socket.to("voice_" + socket.voicePartyId)
+      .emit("voiceUserLeft", socket.id);
+  }
 });
 
 server.listen(PORT, () => {
