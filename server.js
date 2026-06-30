@@ -160,7 +160,8 @@ res.json({
     avatar: user.avatar,
     shirtColor: user.shirtColor,
     skinColor: user.skinColor,
-    pantsColor: user.pantsColor
+    pantsColor: user.pantsColor,
+    elaybux: user.elaybux || 0
   }
 });
 
