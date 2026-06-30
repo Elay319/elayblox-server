@@ -134,7 +134,8 @@ res.json({
     avatar: newUser.avatar,
     shirtColor: newUser.shirtColor,
     skinColor: newUser.skinColor,
-    pantsColor: newUser.pantsColor
+    pantsColor: newUser.pantsColor,
+    elaybux: newUser.elaybux
   }
 });
 
