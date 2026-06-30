@@ -167,6 +167,26 @@ res.json({
 
 });
 
+
+app.get("/wallet/:userId", (req, res) => {
+  const users = getUsers();
+
+  const user = users.find(u => u.id === req.params.userId);
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      error: "User not found"
+    });
+  }
+
+  res.json({
+    success: true,
+    elaybux: user.elaybux || 0
+  });
+});
+
+
 app.post("/publish-block-game", (req, res) => {
   const { name, description, blocks, creator, creatorId } = req.body;
 
