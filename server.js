@@ -110,6 +110,12 @@ const newUser = {
   skinColor: req.body.skinColor || "peachpuff",
   pantsColor: req.body.pantsColor || "black",
 
+  
+  elaybux: 0,
+  lastReward: 0,
+  dailyGameRewards: 0,
+
+  
   friends: [],
   friendRequests: [],
   currentGameId: null,
